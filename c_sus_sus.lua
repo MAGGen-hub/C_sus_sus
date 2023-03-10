@@ -26,7 +26,7 @@ return t end
 
 C={}P={}
 B={"([^ ] -)()([&|~<>][<>=]?)",['&']="band",['|']="bor",['~']="bxor",_="0).bnot(",['>>']="rshift",['<<']="lshift"}
-K={"()([@$&|!%?/\\:;][&|;]?)",['@']="local",['&&']="and",['||']="or",['!']="not",['?']="then",['/|']="if",[':|']="elseif",['\\|']="else",['$']="return",[';;']="end"}
+K={"()([@$&|!%?/\\:;][/&|;]?)",['//']="):floor(",['@']="local",['&&']="and",['||']="or",['!']="not",['?']="then",['/|']="if",[':|']="elseif",['\\|']="else",['$']="return",[';;']="end"}
 F={K=function(S,t)return S:gsub(K[1],function(s,b)
 if not t(s)and K[b]then return' '..K[b]..' 'end
 end)end,
@@ -79,7 +79,8 @@ i=i||0
 r=i+v
 e[n]=e[n]&&r
 /|l?D.setlocal(2,di,r);;
-$p&&r||i;;}
+$p&&r||i;;,
+floor=a,b->math.floor(a/b);;}
 for k,v in pairs(bit32)do I[k]=v;;
 D.setmetatable(0,{__index=I})
 ]],"sus",nil,_ENV)()
