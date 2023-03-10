@@ -1,0 +1,302 @@
+--Created by M.A.G.Gen.
+--C sus sus language documentation.
+-- Current API size 2539 bytes 
+-- 0,251% of 1Mb (Advanced computer default memory)
+
+-- C sus sus is a pseudo-language based on
+-- Lua5.2 and made mostly for three reasons.
+-- First - memory saving. 
+--  In CC:Tweaked advanced computer has only 1Mb limit. 
+--  It doesent matter when we talking about small scripts, 
+--  but can become a serious problem in big
+--  projects such as custom shells.
+--  C sus sus allow usage of pseudo operators
+--  like this ;; /| \| as Lua keywords to to make 
+--  your script shorter. They also can be used without spaces.
+-- Second - to add more syntax sugar
+--  C sus sus alow usage of different operators from C++.
+--  For example C++ increment: <var>++
+--  Bitwize operators: (a&b|c~s)
+--  Lambdas: a,b->a+b;;
+--  += -= %= and other cool stuff now 
+--  avaliable in Lua5.2 with C sus sus.
+-- And the last one - to make your code look SUSPICIOUS =)
+
+
+-- Usage:
+-- After loading the API features can be acessed with 
+-- control string. Control string is a string that starts
+-- with < and ends with >. Control string must be placed
+-- at start of file or string that contain your code.
+-- Example:
+load[[<flag1,flag2,dbg> print'string']]()
+--[[Output:
+print'string'
+string
+--]]--
+
+-- Language flags <flag1,flag2,dbg>
+-- Language flags - keywords that enable C sus sus 
+-- language features. To enable feature flag must be 
+-- inside control string like this <flag_name,flag2_name>
+-- if flag with name *flag_name* exist 
+-- feature of this flag will be alowed in your script.
+
+
+
+-- F flag - lambda functions
+-- Lambda function in C sus sus is a shorter
+-- version of default lua function definition.
+--[[Example1:
+-- C sus sus
+<F>f=a,b->a+b end
+-- Lua5.2
+f=function(a,b) return a+b end
+
+--  Example2:
+-- C sus sus
+<F>f=a,b|>local c=a+b return c end
+-- Lua5.2
+f=function(a,b) local c=a+b return c end
+--]]--
+-- In C sus sus two types of lambdas exist
+--  First:  =*args*->*code* end
+--  Second: =*args*|>*code* return *code2* end
+-- The first one (->) has included return so
+-- Result of code inside will be returned
+-- The second (|>) has no included return.
+-- Lambda must start with = or ( or else it will not work
+
+
+
+-- K flag - keywords
+-- Flag K adds different pseudo-key-word
+-- and also some C++ operators:
+
+-- C sus sus keywords list:
+-- @ - local 
+-- $ - return
+-- ! - not
+-- || - or
+-- && - and
+-- ;; - end
+-- ? - then
+-- /| - if
+-- :| - elseif
+-- \| - else
+
+--[[Example:
+-- C sus sus
+<K>
+@ a=1
+@v= a>0 && 5 ||13
+
+/| v>2 ? print'v > 2'
+:| v>6? print'v > 6'
+:|v>14?print'v > 14'
+\|print'other';;
+
+$v
+-- Lua5.2
+local a=1
+local v= a>0 and 5 or 13
+
+if v>2 then print'v > 2'
+elseif v>6 then print'v > 6'
+elseif v>14 then print'v > 14'
+else print'other' end
+ 
+return v
+--]]--
+-- As you can see in example all C sus sus pseudo-keys ignore
+-- spaces and '\n' ("b/|a" and "b /| a" are correct)
+-- so after develop you can remove a lot of them for memory saving
+-- your code will be unreadable after space and '\n' removing but 
+-- this can save a few bytes.
+-- standart Lua key words (if else end) also work in C sus sus
+
+
+
+-- B flag - bitwize operators
+-- In lua5.3 we have bitwize operators:
+-- & - band
+-- | - bor
+-- ~ - bxor
+-- ~ - bnot (unary)
+-- >> - rshift
+-- << - lshift
+-- With C sus sus this bitwizes avaliable in Lua5.2 so you 
+-- dont need to call bit32 lib each time 
+-- you need bitwize operators.
+-- WARNING! All bitwize in Csussus must be inside () like this (~4&5|6~9>>1)
+-- Bitwizes in Csussus have no priority so the first one 
+-- will be first calculated. Use breackets to change priority...
+--[[Example:
+-- C sus sus
+<K,F,B>
+@b=17
+@f=a,b->a+b ;;
+
+a=(3+1 &b|(5+1>>f(1,2)) )
+-- Lua5.2
+local b=17
+local f=function(a,b)
+
+a=(3+1):band(b):bor( (5+1):rshift(f(1,2)) )
+--]]--
+-- As you can see in this example in C sus sus number values 
+-- has custom metatable. This table alow to use short 
+-- bitwizes (from bit32) and some other features.
+
+
+-- C flag - C++ features and syntax sugar.
+
+-- Operators form C++ avaliable in C sus sus
+-- <var>++ - increment (postfix)
+-- ++<var> - increment (prefix)
+-- <var>-- - decrement in C++ but comment in lua so it will not work
+-- <var>~~ - C sus sus decrement (postfix)
+-- ~~<var> - C sus sus decrement (prefix)
+-- <var>+=<var2> - Addition assignment
+-- <var>-=<var2> - Subtraction assignment
+-- <var>*=<var> - Multiplication assignment
+-- <var>/=<var> - Division assignment
+-- <var>%=<var> - Modulo assignment
+--[[Example:
+-- C sus sus
+<C>
+a=2
+b=12
+b+=1
+print(b++,b,~~a,a,++1)
+-- Output: 13 14 1 1 2 
+-- Lua5.2
+b=12
+b=b+1
+print((0).opt('b',1,_ENV),b,(0).opt('a',-1,_ENV,0),a,(0).opt('1',1,_ENV,0))
+--]]--
+-- WARNING!!! No spaces allowed! This "i ++", this "~~ i" and this "i +=" 
+-- Will not work! Only "~~i", "i++" and "i+=" are correct.
+-- This "i++b" will count as increment(postfix) of "i"
+-- But this "i ++b" will work as increment(prefix) of "b"
+-- WARNING!!! Local variables are not allowed by default.
+-- incraments and decraments will not work with them
+-- because they can be acessed only with debug lib.
+-- If you want them to work you must enable ALLOW LOCAL:
+--[[
+csussus.ctrl.AL=true
+--]]--
+-- Remember! Accessing local variables can greadly decrease your performance!!!
+
+
+-- A flag - All C sus sus features!
+-- A flag loads all C sus sus features in CORRECT load order.
+
+-- A flag load order (correct order):
+-- F,K,C,B
+-- WARNING!!! Incorrect load order will broke your script!
+-- This control string <B,C,K,F> is incorrect
+-- B(bitwize feature) will percive C(C++) and K(pseudo-keys) operators 
+-- as bitwize and translate them to LUA incorrectly!
+-- C sus sus will not check the order of flags, so you must control how
+-- flags are ordered in control string.
+-- WARNING!!! If you don't need one of C sus sus features DO NOT ENABLE IT!
+-- I tried to make C sus sus translator as fast as posible, but it's not 
+-- enought I think. Code converting could still turn into a waste of time,
+-- so to prevent it do not use A flag if you don't need to.
+
+
+
+-- dbg flag - debug your code
+-- dbg flag will print translated Lua code before runing the programm.
+-- So it could be usefull for understanding how your C sus sus code will
+-- look in lua, and where the error can appear.
+-- WARNING! Must be the last flag in control string or else you will
+-- not see the full picture (some parts of code will not be translated)
+
+
+-- P flag - C sus sus PRELOAD_SYSTEM flag
+-- P flag is a very special thing. After you done coding you may realise
+-- that your code is slow (can be very noticeable on servers with low TPC).
+-- This may happen if your program is too large so C sus sus translator (compiller)
+-- Need time to convert it into lua.
+-- To prevent it use P flag.
+-- Example <P,*your_prog_name*,*other_flags*>
+-- *your_prog_name* - the name of program in preload table (must )
+-- (can't be same with ANY flags ("F" - incorrect name "editor_new1234" - correct ))
+-- WARNING!!! Use it only if you done coding! After enabling it: all future changes in
+-- your script will be ignored
+-- until you clear preload table or reboot your PC (or reload C sus sus API).
+-- To clear preload table run next code:
+--[[
+csussus.preload={}
+--]]--
+-- WARNING!!! P flag will work correct only if it placed before ALL OTHER FLAGS
+-- in other way flags befor P may affect your performance!
+-- If program with *your_program_name* exist in preload table - all flags after 
+-- P (with name) will be ignored and C sus sus will load programm directly from
+-- preload table.
+
+
+-- STRING LOAD MODE "s"
+-- If you want to get your translated code as string call 
+-- load function with 's' mode:
+--[[Example:
+str_code=load("<A>@f=a,b->a+b;; $ f",*name*,'s',*env*) -- mode='s'
+--Output: (value of str_code variable)
+"local f=function(a,b)return a+b end return f"
+--]]--
+
+
+-- STRTAB string analiser function:
+-- All default C sus sus flags will ignore any symbols inside any strings and comments
+-- because of strtab() function located in csussus table.
+-- this function returns table with all starts and ends of strings and comments in your
+-- code. It will additionaly return the type of string.
+--[[Example:
+--String:
+this is not a string, but "this is a string (\" - for test) "; [=[long level 1 string]=] -- this is comment
+--Code
+csussus.strtab[[this is not a string, but "this is a string (\" - for test) "; [=[long level 1 string]=] -- this is comment]]
+--Result:
+{
+{27, 61, t = "d"},
+{64, 88, t = "S"},
+{90,107, t = "c"}
+}
+--]]--
+-- STRTAB string types:
+-- "d" - double quotes string: "string"
+-- "s" - single quotes string: 'string'
+-- "S" - long string: [[string]] or [======[string]======]
+-- "c" - comment: --comment
+-- "C" - long comment: --[==[long comment]==]
+-- table returned by strtab can be called with number arg:
+-- t=csussus.strtab(*string*) t(i)
+-- t(i) will return true if i is inside the string or comment
+
+
+
+-- csussus CORE table
+-- this table is the core of C sus sus:
+-- Values:
+-- csussus.ctrl - 
+--     control table with control funcs (only one for now AL="ALLOW LOCAL (in/de)crement")
+-- csussus.bit -
+--     table with bitwize regular expression and bitwize values
+--     (can be edited to change operators)
+-- csussus.flags - 
+--     table with language flags
+--     (allow you to add your own custom flag to use in scripts)
+-- csussus.nummeta - 
+--     C sus sus metatable (only __index value) for numbers 
+--     (funcs from it can be called from any number (15):*nummeta_function*())
+-- csussus.opts - 
+--     C sus sus operators regualr expression and values 
+--     (can be edited to change operators or add custom one).
+-- csussus.preload -
+--     table with preloaded programs
+-- csussus.strtab -
+--     function for strings and coments searching
+
+-- End of docs...
