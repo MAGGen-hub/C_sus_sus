@@ -1,7 +1,7 @@
 --Created by M.A.G.Gen.
 --C sus sus language documentation.
--- Current API size 2539 bytes 
--- 0,251% of 1Mb (Advanced computer default memory)
+-- Current API size 2587 bytes 
+-- 0,246% of 1Mb (Advanced computer default memory)
 
 -- C sus sus is a pseudo-language based on
 -- Lua5.2 and made mostly for three reasons.
@@ -84,6 +84,10 @@ f=function(a,b) local c=a+b return c end
 -- /| - if
 -- :| - elseif
 -- \| - else
+
+-- // - integer division (MUST be in () like
+-- all bitwize operators from B flag 
+-- Ex: (a//b) )
 
 --[[Example:
 -- C sus sus
