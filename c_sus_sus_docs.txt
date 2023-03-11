@@ -1,7 +1,7 @@
 --Created by M.A.G.Gen.
---C sus sus language documentation.
--- Current API size 2584 bytes 
--- 0,246% of 1Mb (Advanced computer default memory)
+--C SuS SuS 1.4 language documentation.
+-- Current API size 2597 bytes 
+-- 0,248% of 1Mb (Advanced computer default memory)
 
 -- C sus sus is a pseudo-language based on
 -- Lua5.2 and made mostly for three reasons.
@@ -302,5 +302,6 @@ cssc.strtab[[this is not a string, but "this is a string (\" - for test) "; [=[l
 --     table with preloaded programs
 -- cssc.strtab -
 --     function for strings and coments searching
+-- cssc.version - API version
 
 -- End of docs...
