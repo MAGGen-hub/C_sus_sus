@@ -85,4 +85,4 @@ for k,v in pairs(bit32)do I[k]=v;;
 D.setmetatable(0,{__index=I})
 ]],"sus",nil,_ENV)()
 
-_G.cssc={ctrl=C,preload=P,nummeta=I,bit=B,opts=K,flags=F,strtab=T}
+_G.cssc={ctrl=C,preload=P,nummeta=I,bit=B,opts=K,flags=F,strtab=T,version=1.4}
