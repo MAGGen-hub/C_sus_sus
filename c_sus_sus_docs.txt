@@ -1,6 +1,6 @@
 --Created by M.A.G.Gen.
 --C sus sus language documentation.
--- Current API size 2587 bytes 
+-- Current API size 2584 bytes 
 -- 0,246% of 1Mb (Advanced computer default memory)
 
 -- C sus sus is a pseudo-language based on
@@ -188,7 +188,7 @@ print((0).opt('b',1,_ENV),b,(0).opt('a',-1,_ENV,0),a,(0).opt('1',1,_ENV,0))
 -- because they can be acessed only with debug lib.
 -- If you want them to work you must enable ALLOW LOCAL:
 --[[
-csussus.ctrl.AL=true
+cssc.ctrl.AL=true
 --]]--
 -- Remember! Accessing local variables can greadly decrease your performance!!!
 
@@ -233,7 +233,7 @@ csussus.ctrl.AL=true
 -- until you clear preload table or reboot your PC (or reload C sus sus API).
 -- To clear preload table run next code:
 --[[
-csussus.preload={}
+cssc.preload={}
 --]]--
 -- WARNING!!! P flag will work correct only if it placed before ALL OTHER FLAGS
 -- in other way flags befor P may affect your performance!
@@ -261,7 +261,7 @@ str_code=load("<A>@f=a,b->a+b;; $ f",*name*,'s',*env*) -- mode='s'
 --String:
 this is not a string, but "this is a string (\" - for test) "; [=[long level 1 string]=] -- this is comment
 --Code
-csussus.strtab[[this is not a string, but "this is a string (\" - for test) "; [=[long level 1 string]=] -- this is comment]]
+cssc.strtab[[this is not a string, but "this is a string (\" - for test) "; [=[long level 1 string]=] -- this is comment]]
 --Result:
 {
 {27, 61, t = "d"},
@@ -276,31 +276,31 @@ csussus.strtab[[this is not a string, but "this is a string (\" - for test) "; [
 -- "c" - comment: --comment
 -- "C" - long comment: --[==[long comment]==]
 -- table returned by strtab can be called with number arg:
--- t=csussus.strtab(*string*) t(i)
+-- t=cssc.strtab(*string*) t(i)
 -- t(i) will return true if i is inside the string or comment
 
 
 
--- csussus CORE table
+-- C SuS SuS CORE table
 -- this table is the core of C sus sus:
 -- Values:
--- csussus.ctrl - 
+-- cssc.ctrl - 
 --     control table with control funcs (only one for now AL="ALLOW LOCAL (in/de)crement")
--- csussus.bit -
+-- cssc.bit -
 --     table with bitwize regular expression and bitwize values
 --     (can be edited to change operators)
--- csussus.flags - 
+-- cssc.flags - 
 --     table with language flags
 --     (allow you to add your own custom flag to use in scripts)
--- csussus.nummeta - 
+-- cssc.nummeta - 
 --     C sus sus metatable (only __index value) for numbers 
 --     (funcs from it can be called from any number (15):*nummeta_function*())
--- csussus.opts - 
+-- cssc.opts - 
 --     C sus sus operators regualr expression and values 
 --     (can be edited to change operators or add custom one).
--- csussus.preload -
+-- cssc.preload -
 --     table with preloaded programs
--- csussus.strtab -
+-- cssc.strtab -
 --     function for strings and coments searching
 
 -- End of docs...
