@@ -1,6 +1,6 @@
 --Created by M.A.G.Gen.
 --C SuS SuS 1.4 language documentation.
--- Current API size 2616± bytes 
+-- Current API size 2760± bytes 
 -- 0,248% of 1Mb (Advanced computer default memory)
 
 -- C sus sus is a pseudo-language based on
