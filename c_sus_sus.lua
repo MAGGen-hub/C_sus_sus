@@ -53,36 +53,35 @@ return __load(x,name,mode,env)
 end
 
 load([[<K,F>
-@D=debug
+@D,Y=debug,"[%w_%.%]%[]+)"
 F.B=S,t->S:gsub(B[1],(p,s,o|>if!t(s)?
 /|B[o]?$p..((o=='~'&&p:match"^[^)^_^%w]")&&B._||'):'..B[o]..'(');;
 ;;;;));;
 F.C=S,t|>
-@cr=s,c,b,a,p|>
+@cr=c,s,b,a,p|>
 if!t(s)?
-/|a==b?$"(0).opt('"..c.."',_ENV,"..(a=='+'&&'1'||'-1')..(p&&',0'||'')..")"
-:|'='==a&&b~='~'?$c..a..c..b..(b=='.'&&b||'');;
+ /|a==b?$"(0).opt('"..c.."',_ENV,"..(a=='+'&&'1'||'-1')..(p&&',0'||'')..")"
+ :|a=='='&&b~='~'?$c..a..c..b..(b=='.'&&b||'');;
 ;;;;
-S=S:gsub("()([%w_]+)([%.%-~%+%*%%%^])([~%+=])",cr)t=T(S)
-$S:gsub("()([~%+])([~%+])([%w_]+)",(s,b,a,c->cr(s,c,b,a,0);;))
+S=S:gsub("("..Y.."()([%.%-~%+%*%%%^])([~%+=])",cr)t=T(S)
+$S:gsub("([~%+])([~%+])()("..Y,(b,a,s,c->cr(c,s,b,a,0);;))
 ;;
 F.A=S,t|>S=F.F(S,t)S=F.K(S,T(S))S=F.C(S,T(S))S=F.B(S,T(S))$S;;
 F.dbg=S|>print(S)$S;;
 C.AL=!1
 I={opt=n,e,v,p|>
-@i,r,di,l,v2=0
-i=e[n]||tonumber(n)
-if!i&&C.AL?i=0
-repeat i=i+1 l,v2=D.getlocal(2,i)until!l||l==n
-di=i i=l&&v2||0;;
-i=i||0
-r=i+v
-e[n]=e[n]&&r
-/|l?D.setlocal(2,di,r);;
-$p&&r||i;;,
+@c,i,l,m=0
+/|C.AL?repeat c=c+1 l,m=D.getlocal(2,c) until!l||l==n:match"[%w_]+"
+/|l?
+/|type(m)==type{}?l=n:match("([%.%[]"..Y)i=I.opt((l&&"E"..l||n),{E=m},v,p)
+\|i,m=p&&m+v||m,m+v;;D.setlocal(2,c,m)$i
+;;;;
+m,i=pcall(load((tonumber(n)&&""||n.."="..n.."+"..v).." return "..n,"",nil,e))
+$m&&(p&&i||i-v)||0
+;;,
 floor=a,b->math.floor(a/b);;}
 for k,v in pairs(bit32)do I[k]=v;;
 D.setmetatable(0,{__index=I})
 ]],"sus",nil,_ENV)()
 
-_G.cssc={ctrl=C,preload=P,nummeta=I,bit=B,opts=K,flags=F,strtab=T,version=1.4}
+_G.cssc={ctrl=C,preload=P,nummeta=I,bit=B,opts=K,flags=F,strtab=T,version=1.7}
