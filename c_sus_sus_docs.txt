@@ -1,6 +1,6 @@
 --Created by M.A.G.Gen.
 --C SuS SuS 1.4 language documentation.
--- Current API size 2597 bytes 
+-- Current API size 2616± bytes 
 -- 0,248% of 1Mb (Advanced computer default memory)
 
 -- C sus sus is a pseudo-language based on
@@ -166,6 +166,7 @@ a=(3+1):band(b):bor( (5+1):rshift(f(1,2)) )
 -- <var>*=<var> - Multiplication assignment
 -- <var>/=<var> - Division assignment
 -- <var>%=<var> - Modulo assignment
+-- <var>.=<var> - Concatenation assignment
 --[[Example:
 -- C sus sus
 <C>
