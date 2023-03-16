@@ -1,3 +1,4 @@
+if not cssc then
 T=function(S)
 local t,f,s,c={},0
 for i,v in S:gfind"()(['\"%[%-])"do
@@ -35,8 +36,8 @@ if not(t(s)or t(f))then
 return a..'function('..v..(b=='-'and")return "or')')end
 end)end}
 
-if not _G.__load then _G.__load=load end
-_G.load=function(x,name,mode,env)
+local NL=load
+L=function(x,name,mode,env)
 if"string"==type(x)then
 local a,p,d=x:match"^<.->"
  if a then
@@ -46,13 +47,13 @@ local a,p,d=x:match"^<.->"
   elseif a=='P'then p=0 else p=p and a if p and p~=0 and P[p]then return P[p]end end
   end
  if mode=='s'then return x end
- if p and p~=0 then if not P[p]then P[p]=__load(x,name,mode,env)end return P[p]end
+ if p and p~=0 then if not P[p]then P[p]=NL(x,name,mode,env)end return P[p]end
  end
 end
-return __load(x,name,mode,env)
+return NL(x,name,mode,env)
 end
 
-load([[<K,F>
+L([[<K,F>
 @D,Y=debug,"[%w_%.%]%[]+)"
 F.B=S,t->S:gsub(B[1],(p,s,o|>if!t(s)?
 /|B[o]?$p..((o=='~'&&p:match"^[^)^_^%w]")&&B._||'):'..B[o]..'(');;
@@ -76,12 +77,28 @@ I={opt=n,e,v,p|>
 /|type(m)==type{}?l=n:match("([%.%[]"..Y)i=I.opt((l&&"E"..l||n),{E=m},v,p)
 \|i,m=p&&m+v||m,m+v;;D.setlocal(2,c,m)$i
 ;;;;
-m,i=pcall(load((tonumber(n)&&""||n.."="..n.."+"..v).." return "..n,"",nil,e))
+m,i=pcall(NL((tonumber(n)&&""||n.."="..n.."+"..v).." return "..n,"",nil,e))
 $m&&(p&&i||i-v)||0
 ;;,
-floor=a,b->math.floor(a/b);;}
+floor=a,b->math.floor(a/b);;,
+char=string.char}
 for k,v in pairs(bit32)do I[k]=v;;
 D.setmetatable(0,{__index=I})
-]],"sus",nil,_ENV)()
 
-_G.cssc={ctrl=C,preload=P,nummeta=I,bit=B,opts=K,flags=F,strtab=T,version=1.7}
+R=E,...|>
+/|...?
+@a,l,f,e,s={...},shell.resolveProgram(...)
+f,e=fs.open(l,"r")
+e=e&&error(e)
+s=f.readAll()f.close()
+E.arg[0]=table.remove(a,1)
+table.remove(E.arg,1)
+f,e=cssc.load(s,"@/"..l,nil,E)(unpack(a))
+$f&&f()||error(e);;;;
+
+_G.cssc={run=R,load=L,ctrl=C,preload=P,nummeta=I,bit=B,opts=K,flags=F,strtab=T,version=2.1}
+
+shell.run(arg[0],...)
+]],"sus",nil,_ENV)(...)
+end
+return cssc.run(_ENV,...)
