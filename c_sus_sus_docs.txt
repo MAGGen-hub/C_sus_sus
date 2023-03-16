@@ -1,6 +1,6 @@
 --Created by M.A.G.Gen.
 --C SuS SuS 1.4 language documentation.
--- Current API size 2760± bytes 
+-- Current API size 3000± bytes 
 -- 0,248% of 1Mb (Advanced computer default memory)
 
 -- C sus sus is a pseudo-language based on
@@ -304,5 +304,7 @@ cssc.strtab[[this is not a string, but "this is a string (\" - for test) "; [=[l
 -- cssc.strtab -
 --     function for strings and coments searching
 -- cssc.version - API version
+-- cssc.run(_ENV,path_to_prog,...) cssc program runner 
+-- cssc.load(x,name,mode,env)--load function (may be used to replace _G.load to run cssc progs directly from shell/editor)
 
 -- End of docs...
