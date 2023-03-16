@@ -91,14 +91,14 @@ R=E,...|>
 f,e=fs.open(l,"r")
 e=e&&error(e)
 s=f.readAll()f.close()
-E.arg[0]=table.remove(a,1)
-table.remove(E.arg,1)
+/|E.arg?
+ E.arg[0]=table.remove(a,1)
+ table.remove(E.arg,1);;
 f,e=cssc.load(s,"@/"..l,nil,E)(unpack(a))
 $f&&f()||error(e);;;;
 
 _G.cssc={run=R,load=L,ctrl=C,preload=P,nummeta=I,bit=B,opts=K,flags=F,strtab=T,version=2.1}
-
-shell.run(arg[0],...)
+/|shell&&...?shell.run(arg[0],...);;
 ]],"sus",nil,_ENV)(...)
 end
 return cssc.run(_ENV,...)
