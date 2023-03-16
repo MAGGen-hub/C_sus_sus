@@ -88,12 +88,11 @@ D.setmetatable(0,{__index=I})
 R=E,...|>
 /|...?
 @a,l,f,e,s={...},shell.resolveProgram(...)
-f,e=fs.open(l,"r")
+f,e=fs.open(l||"","r")
 e=e&&error(e)
 s=f.readAll()f.close()
-/|E.arg?
- E.arg[0]=table.remove(a,1)
- table.remove(E.arg,1);;
+e=table.remove(a,1)
+/|E.arg?E.arg[0]=e table.remove(E.arg,1);;
 f,e=cssc.load(s,"@/"..l,nil,E)(unpack(a))
 $f&&f()||error(e);;;;
 
