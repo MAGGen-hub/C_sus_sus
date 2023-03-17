@@ -121,6 +121,17 @@ return v
 
 
 
+-- b flag - (small b) support for 0b00000000 format
+-- With b flag 0b00000000 number format will be supported in your code
+--[[Example:
+-- C sus sus
+<b> i=0b0111
+-- Lua5.2
+i=7
+--]]--
+
+
+
 -- B flag - bitwize operators
 -- In lua5.3 we have bitwize operators:
 -- & - band
