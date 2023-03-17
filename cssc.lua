@@ -100,7 +100,7 @@ e=table.remove(a,1)
 f,e=cssc.load(s,"@/"..l,nil,E)(unpack(a))
 $f&&f()||error(e);;;;
 
-_G.cssc={run=R,load=L,ctrl=C,preload=P,nummeta=I,bit=B,opts=K,flags=F,strtab=T,version=2.1}
+_G.cssc={run=R,load=L,ctrl=C,preload=P,nummeta=I,bit=B,opts=K,flags=F,strtab=T,version=2.3}
 /|shell&&...?shell.run(arg[0],...);;
 ]],"sus",nil,_ENV)(...)
 end
