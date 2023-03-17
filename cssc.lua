@@ -67,7 +67,11 @@ if!t(s)?
 S=S:gsub("("..Y.."()([%.%-~%+%*%%%^])([~%+=])",cr)t=T(S)
 $S:gsub("([~%+])([~%+])()("..Y,(b,a,s,c->cr(c,s,b,a,0);;))
 ;;
-F.A=S,t|>S=F.F(S,t)S=F.K(S,T(S))S=F.C(S,T(S))S=F.B(S,T(S))$S;;
+F.b=S,t->S:gsub("([^_^%w])0()b([01]+)()([^_^%w]?)",(s,n,b,l,e|>/|!t(n)&&(#e>0||l>#S)?@r=0
+for i,k in b:gmatch"()(.)"do r=r+k*2^(#b-i)end
+$s..r..e
+;;;;));;
+F.A=S,t|>S=F.F(S,t)S=F.K(S,T(S))S=F.C(S,T(S))S=F.B(S,T(S))$F.b(S,T(S));;
 F.dbg=S|>print(S)$S;;
 C.AL=!1
 I={opt=n,e,v,p|>
