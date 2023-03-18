@@ -1,14 +1,4 @@
-if not cssc then
-T=function(S)
-local t,f,s,c={},0
-for i,v in S:gfind"()(['\"%[%-])"do
-if f and i>f then
-if v=='-'then s=S:find('^%-',i+1)c=s end
-if v=='['or c then
- s=S:match('^%[(=*)%[',c and i+2 or i)
- if s then
-  s,f=S:find(']'..('='):rep(#s)..']',f)
-  t[#t+1]={t=c and'C'or'S',i,f}
+t+1]={t=c and'C'or'S',i,f}
  elseif c then
   s,f=S:find('\n',i)
   t[#t+1]={t='c',i,f}
@@ -21,7 +11,7 @@ end end
 if not f then t[#t][2]=#S end
 setmetatable(t,{__call=function(t,i)local j=1
 if #t<1 then return false end
-while t[j] and i >= t[j][1] do j=j+1 end
+while t[j]and i>=t[j][1]do j=j+1 end
 return j>1 and i<=t[j-1][2]end})
 return t end
 
@@ -44,10 +34,11 @@ local a,p,d,e=x:match"^<.->"
  x=x:sub(#a+1)
   for a in a:gfind'[%w_]+'do
   if F[a]then x=F[a](x,T(x))
-  elseif a=='P'then p=0 else p=p and a if p and p~=0 and P[p]then return env and setfenv(P[p],env)or P[p] end end
+  elseif a=='P'then p=0
+  else p=p and a if p and p~=0 and P[p]then return env and setfenv(P[p],env)or P[p]end end
   end
  if mode=='s'then return x end
- if p and p~=0 then if not P[p]then P[p]=NL(x,name,mode,env)end return P[p]end
+ if p and p~=0 then P[p]=NL(x,name,mode,env)return P[p]end
  end
 end
 return NL(x,name,mode,env)
