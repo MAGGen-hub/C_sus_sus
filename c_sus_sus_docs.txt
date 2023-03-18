@@ -1,5 +1,5 @@
 --Created by M.A.G.Gen.
---C SuS SuS 2.3 language documentation.
+--C SuS SuS 2.4 language documentation.
 -- Current API size 3250± bytes 
 -- 0,32%± of 1Mb (Advanced computer default memory)
 
@@ -311,7 +311,7 @@ cssc.strtab[[this is not a string, but "this is a string (\" - for test) "; [=[l
 --     C sus sus operators regualr expression and values 
 --     (can be edited to change operators or add custom one).
 -- cssc.preload -
---     table with preloaded programs
+--     table with preloaded programs (in string format)
 -- cssc.strtab -
 --     function for strings and coments searching
 -- cssc.version - API version
