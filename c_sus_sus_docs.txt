@@ -1,5 +1,5 @@
 --Created by M.A.G.Gen.
---C SuS SuS 2.4 language documentation.
+--C SuS SuS 2.5 language documentation.
 -- Current API size 3250± bytes 
 -- 0,32%± of 1Mb (Advanced computer default memory)
 
