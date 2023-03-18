@@ -6,6 +6,6 @@ Language created for memory saving in Craft-OS and CC:Tweaked projects.
 
 Can be used in other lua scripts with a few changes.
 
-Code: c_sus_sus.lua
+Code: cssc.lua
 
 Documentation: c_sus_sus_docs.txt
