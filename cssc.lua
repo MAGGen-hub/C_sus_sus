@@ -47,7 +47,7 @@ local a,p,d=x:match"^<.->"
   elseif a=='P'then p=0 else p=p and a if p and p~=0 and P[p]then return P[p]end end
   end
  if mode=='s'then return x end
- if p and p~=0 then if not P[p]then P[p]=NL(x,name,mode,env)end return P[p]end
+ if p and p~=0 then if not P[p]then P[p]=x end return NL(P[p],name,mode,env)end
  end
 end
 return NL(x,name,mode,env)
@@ -100,7 +100,7 @@ e=table.remove(a,1)
 f,e=cssc.load(s,"@/"..l,nil,E)(unpack(a))
 $f&&f()||error(e);;;;
 
-_G.cssc={run=R,load=L,ctrl=C,preload=P,nummeta=I,bit=B,opts=K,flags=F,strtab=T,version=2.3}
+_G.cssc={run=R,load=L,ctrl=C,preload=P,nummeta=I,bit=B,opts=K,flags=F,strtab=T,version=2.4}
 /|shell&&...?shell.run(arg[0],...);;
 ]],"sus",nil,_ENV)(...)
 end
