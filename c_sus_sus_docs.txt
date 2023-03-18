@@ -311,7 +311,7 @@ cssc.strtab[[this is not a string, but "this is a string (\" - for test) "; [=[l
 --     C sus sus operators regualr expression and values 
 --     (can be edited to change operators or add custom one).
 -- cssc.preload -
---     table with preloaded programs (in string format)
+--     table with preloaded programs
 -- cssc.strtab -
 --     function for strings and coments searching
 -- cssc.version - API version
