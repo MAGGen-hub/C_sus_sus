@@ -25,7 +25,7 @@ while t[j] and i >= t[j][1] do j=j+1 end
 return j>1 and i<=t[j-1][2]end})
 return t end
 
-C={}P={}
+P={}
 B={"([^ ] -)()([&|~<>][<>=]?)",['&']="band",['|']="bor",['~']="bxor",_="0).bnot(",['>>']="rshift",['<<']="lshift"}
 K={"()([@$&|!%?/\\:;][/&|;]?)",['//']="):floor(",['@']="local",['&&']="and",['||']="or",['!']="not",['?']="then",['/|']="if",[':|']="elseif",['\\|']="else",['$']="return",[';;']="end"}
 F={K=function(S,t)return S:gsub(K[1],function(s,b)
@@ -39,15 +39,15 @@ end)end}
 local NL=load
 L=function(x,name,mode,env)
 if"string"==type(x)then
-local a,p,d=x:match"^<.->"
+local a,p,d,e=x:match"^<.->"
  if a then
  x=x:sub(#a+1)
   for a in a:gfind'[%w_]+'do
   if F[a]then x=F[a](x,T(x))
-  elseif a=='P'then p=0 else p=p and a if p and p~=0 and P[p]then return P[p]end end
+  elseif a=='P'then p=0 else p=p and a if p and p~=0 and P[p]then return env and setfenv(P[p],env)or P[p] end end
   end
  if mode=='s'then return x end
- if p and p~=0 then if not P[p]then P[p]=x end return NL(P[p],name,mode,env)end
+ if p and p~=0 then if not P[p]then P[p]=NL(x,name,mode,env)end return P[p]end
  end
 end
 return NL(x,name,mode,env)
@@ -73,7 +73,7 @@ $s..r..e
 ;;;;));;
 F.A=S,t|>S=F.F(S,t)S=F.K(S,T(S))S=F.C(S,T(S))S=F.B(S,T(S))$F.b(S,T(S));;
 F.dbg=S|>print(S)$S;;
-C.AL=!1
+C={AL=!1}
 I={opt=n,e,v,p|>
 @c,i,l,m=0
 /|C.AL?repeat c=c+1 l,m=D.getlocal(2,c) until!l||l==n:match"[%w_]+"
@@ -100,7 +100,7 @@ e=table.remove(a,1)
 f,e=cssc.load(s,"@/"..l,nil,E)(unpack(a))
 $f&&f()||error(e);;;;
 
-_G.cssc={run=R,load=L,ctrl=C,preload=P,nummeta=I,bit=B,opts=K,flags=F,strtab=T,version=2.4}
+_G.cssc={run=R,load=L,ctrl=C,preload=P,nummeta=I,bit=B,opts=K,flags=F,strtab=T,version=2.5}
 /|shell&&...?shell.run(arg[0],...);;
 ]],"sus",nil,_ENV)(...)
 end
