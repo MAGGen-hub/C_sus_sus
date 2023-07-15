@@ -85,7 +85,7 @@ L=function(x,name,mode,env)
         local c=x:match"^<.->"or x:match"^#!.-\n?<.->" -- locate control string
         if c then --control string exists!
             --INITIALISE LOCALS
-            local R,S,O,C,s,t,a,b,i={},{},{}
+            local R,S,O,C,s,t,a,b,i,f={},{},{}
             x=x:sub(#c+1) --remove control string to start parsing
             C={O=O,S=S,R=R,F={},l=0} -- initialise control tablet for special functions calls
             --INITIALIZE COMPILLER
@@ -110,25 +110,19 @@ L=function(x,name,mode,env)
                 
                 --STRING MODE: string or comment located and must be captured
                 if s then
-                    c=nil --checker variable: c=1 if string end found.
-                    if s:find"['\"\n]"then --string or comment
-                        a,b=o:find("\\*[\n"..s.."]")--\n-for unfinished strings
-                        if a and(s=="\n"or(b-a)%2<1)then c=1 end
-                    else --long string or comment
-                        a,b=o:find"%][=]*%]"
-                        if a and(#s==b-a+1)then c=1 end
-                    end
-                    if c then --finish procedure
-                        R[#R+1]=t..o:sub(0,b)
+                    a,b=o:find(#s<2 and "\\*[\n"..s.."]"or"%]=*%]") --locate posible end of string (depends on string type)
+                    if a and(#s<2 and(s=="\n"or b-a%2<1)or#s==b-a+1)then --is it really the end of string?
+                        R[#R+1]=t..o:sub(0,b) --string fin found, record to table
                         o=o:sub(b+1)
-                        s,C.s,t=nil
-                    else -- if string is unfinisged...
+                        s,C.s,t=nil --disable string mode
+                    else
                         t=t..o..w
                     end
                 end
                 
                 --DEFAULT MODE: main compiler part
                 if not s then
+                
                     --STRING LOCATOR
                     c=o:find"%-%-"or o:find"%[=*%["or o:find"['\"]" --if start found: init str_mode
                     if c then
@@ -144,19 +138,20 @@ L=function(x,name,mode,env)
                         a,b=v(C,o,w)
                         o,w=a or o,b or w
                     end
+                    
                     --OPERATOR PARCE
                     while #o>0 do
                         c=o:match"^%s+" --this code was made to decrase the length of result table and allow spacing in operators capture section 
                         if c then R[#R],o=(R[#R]or"")..c,o:sub(#c+1)end --(greatly increases speed of compiller) allow to skip more than 50 gfind calls
                         
                         for i=3,1,-1 do --WARNING! Max operator length: 3    
-                            c=o:match((".?"):rep(i)) -- c variable here used to store posible operator
-                            if O[c]then --if O[posible_operator] -> C SuS SuS enabled operator (or something else) found and must be parced
-                                if 7>#type(O[c])then --type<7 -> string; >7 - function | these can't be any othere values
-                                    R[#R+1]=" "..O[c].." "
+                            c=O[o:match((".?"):rep(i))] -- c variable here used to store posible operator
+                            if c then --if O[posible_operator] -> C SuS SuS enabled operator (or something else) found and must be parced
+                                if 7>#type(c)then --type<7 -> string; >7 - function | these can't be any othere values
+                                    R[#R+1]=" "..c.." "
                                     o=o:sub(i+1)
                                 else
-                                    a,b=O[c](C,o,w) --if there is a special replacement function
+                                    a,b=c(C,o,w) --if there is a special replacement function
                                     o,w=a or o:sub(i+1),b or w
                                 end
                                 break -- operator found! break out...
@@ -165,8 +160,6 @@ L=function(x,name,mode,env)
                                 o=o:sub(2)
                             end
                         end
-                        --c=o:match"^%s+"--this part of code was made to decrase length of result table and allow spacing in operators capture section
-                        --if c then R[#R],o=(R[#R]or"")..c,o:sub(#c+1)end --(greatly increases speed of compiller) allow to skip more than 50 gfind calls
                     end
                     
                     --WORD
@@ -189,7 +182,7 @@ L=function(x,name,mode,env)
     return NL(x,name,mode,env)
 end
 --load other features of compiler using compiler it self (can be used as example of C SuS SuS programming)
-a,b=L([[<E,K,F,dbg>
+a,b=L([[<E,K,F>
 --0b0000000 and 0o0000.000 number format support (avaliable exponenta: E+-x)
 F.b={C->--return function that will be inserted in special extensions table
     C,o,w=>
