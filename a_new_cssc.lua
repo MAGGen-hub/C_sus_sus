@@ -15,7 +15,7 @@
     -- t - temp: used to store unfinished strings and some other temporal data
     -- s - str_mode: used to switch compiller to string or comment parceing mode
     -- R - result: table with parced code
-    -- c - check: checker variable for string finishing/control string parcing/other data storage
+    -- c - in compiller used to grab comments and throw them away from operator/word squence
     -- a - start_point of string/other data storage
     -- b - end point of string/other data storage
     -- i - usualy used for index
@@ -57,7 +57,7 @@ K={ ["@"]=K[5],--local
     ["&&"]=K[8],--and
     ["!"]=K[9],--not
     [";"]=function(C,o) -- any ";" that stand near ";,)]" or "\n" will be replaced by " end " for ex ";;" equal to " end  end "
-              e,a,p=" end ",o:match"(;*)([\n%S]?)"
+              e,a,p=" end ",o:match"(;*) *([\n%S]?)"
               C.R[#C.R+1]=(#p>0 or#a>1 or(#p<1 and C.s))and e:rep(#a)or";"
               return o:sub(#a+1)
           end},
@@ -84,10 +84,12 @@ L=function(x,name,mode,env)
     if type(x)=="string" then -- x might be a function or a string
         local c=x:match"^<.->"or x:match"^#!.-\n?<.->" -- locate control string
         if c then --control string exists!
+        
             --INITIALISE LOCALS
-            local R,S,O,C,s,t,a,b,i,f={},{},{}
+            local R,S,O,po,C,s,t,a,b,l={},{},{},""
             x=x:sub(#c+1) --remove control string to start parsing
-            C={O=O,S=S,R=R,F={},l=0} -- initialise control tablet for special functions calls
+            C={O=O,S=S,R=R,F={},c={},l=1} -- initialise control tablet for special functions calls
+            
             --INITIALIZE COMPILLER
             for K,V in c:gfind"([%w_]+)%(?([%w_.]*)"do--load flags that used in control string: K - feature name V - feature argument
                 if F[K]then -- feature exist
@@ -102,18 +104,24 @@ L=function(x,name,mode,env)
                 --TODO!
             end
             --COMPILE -- o: operator, w: word
+            --print(x)
             for o,w in x:gfind"([^_%P%'\"%[]*[^\n%S]*-?-?%[?=*[%['\"]?%s*)([%w_]*[^%w%p%s]*[^\n%S]*)"do 
                                         -- see that pattern? Now try to spell it in one breath! =P
                                         -- in this pattern the word (w) will never be "^%s*$"!
                 --LINE COUNTER
-                for c in o:gfind"\n"do C.l=C.l+1 end
+                for i in o:gfind"\n"do C.l=C.l+1 end
                 
                 --STRING MODE: string or comment located and must be captured
                 if s then
-                    a,b=o:find(#s<2 and "\\*[\n"..s.."]"or"%]=*%]") --locate posible end of string (depends on string type)
-                    if a and(#s<2 and(s=="\n"or b-a%2<1)or#s==b-a+1)then --is it really the end of string?
-                        R[#R+1]=t..o:sub(0,b) --string fin found, record to table
-                        o=o:sub(b+1)
+                    a,b=o:find(#s<2 and "\\*[\n"..s.."]"or "%]=*%]") --locate posible end of string (depends on string type)
+                    if a and(#s<2 and(s=="\n"or b-a%2<1)or #s==b-a+1)then --is it really the end of string?
+                        t=t..o:sub(0,b)
+                        if c then --comment mode
+                            C.c[#C.c+1]=t
+                        else
+                            R[#R+1]=t --string fin found, record to table
+                        end
+                        o,po=po..o:sub(b+1),"" --po if there was previous operator
                         s,C.s,t=nil --disable string mode
                     else
                         t=t..o..w
@@ -124,46 +132,49 @@ L=function(x,name,mode,env)
                 if not s then
                 
                     --STRING LOCATOR
-                    c=o:find"%-%-"or o:find"%[=*%["or o:find"['\"]" --if start found: init str_mode
-                    if c then
-                        t=o:sub(c)..w -- c here is index where string starts
-                        s=o:match"%[=*%["or o:match"['\"]"or"\n" -- s here now contain "type" of string
-                        o=o:sub(0,c-1)
-                        w=""
+                    c=o:match"%-%-" --if start found: init str_mode
+                    s=o:match"%[=*%["or o:match"['\"]"
+                    if c or s then
+                        s=s or"\n" --(string/long_string/long_comment) or small_comment
+                        a=o:find(c or s,1,1)--get start of string
+                        t,w=o:sub(a)..w,"" -- save temp string and errase w
+                        o=o:sub(0,a-1) -- errase temp string part of operator
                         C.s=s -- You may think that this is miportant, and yes.. that is.
                     end
-                    
-                    --SPECIAL FUNCTIONS
-                    for k,v in pairs(S) do -- pairs for named functions
-                        a,b=v(C,o,w)
-                        o,w=a or o,b or w
-                    end
-                    
-                    --OPERATOR PARCE
-                    while #o>0 do
-                        c=o:match"^%s+" --this code was made to decrase the length of result table and allow spacing in operators capture section 
-                        if c then R[#R],o=(R[#R]or"")..c,o:sub(#c+1)end --(greatly increases speed of compiller) allow to skip more than 50 gfind calls
-                        
-                        for i=3,1,-1 do --WARNING! Max operator length: 3    
-                            c=O[o:match((".?"):rep(i))] -- c variable here used to store posible operator
-                            if c then --if O[posible_operator] -> C SuS SuS enabled operator (or something else) found and must be parced
-                                if 7>#type(c)then --type<7 -> string; >7 - function | these can't be any othere values
-                                    R[#R+1]=" "..c.." "
-                                    o=o:sub(i+1)
-                                else
-                                    a,b=c(C,o,w) --if there is a special replacement function
-                                    o,w=a or o:sub(i+1),b or w
+                    if c then -- Comment loacted! Skip required (comment skip option was added to make sure that the `word` will be empty only if string located or there is no word)
+                              -- Option example: this code: "a.--[[trouble maker comment]]b()" is normal for Lua 
+                              -- but if you replace "." with C SuS SuS "?." without comment skip it will be parced incorrectly!
+                        po=o.."\0"--set previous operator
+                    else 
+                        l=#o --save length
+                        --SPECIAL FUNCTIONS (they usualy work with "R" table and not changing words or operators (if it not new keyword or number format))
+                        for k,v in pairs(S) do a,b=v(C,o,w) o,w=a or o,b or w end --call all funcs and save new o,w if they exist as return result
+                        --OPERATOR PARCE
+                        while #o>0 do
+                            --a=o:match"^%s+" --this code was made to decrase the length of result table and allow spacing in operators capture section 
+                            --if a then R[#R],o=(R[#R]or"")..a,o:sub(#a+1)end --(greatly increases speed of compiller) allow to skip more than 50 gfind calls
+                            
+                            for i=3,1,-1 do --WARNING! Max operator length: 3    
+                                a=O[o:match((".?"):rep(i))] -- a variable here used to store enabled_operators[posible operator]
+                                if a then --if O[posible_operator] -> C SuS SuS enabled operator (or something else) found and must be parced
+                                    if 7>#type(a)then --type<7 -> string; >7 - function | these can't be any othere values
+                                        R[#R+1]=" "..a.." "
+                                        o=o:sub(i+1)
+                                    else
+                                        a,b=a(C,o,w) --if there is a special replacement function
+                                        o,w=a or o:sub(i+1),b or w
+                                    end
+                                    break -- operator found! break out...
+                                elseif i<2 then --operator was not found
+                                    a=o:sub(1,1)
+                                    R[#R+1]=#o>0 and (a=="\0" and (table.remove(C.c,1)or"") or a) or nil -- \0 - comment operator
+                                    o=o:sub(2)
                                 end
-                                break -- operator found! break out...
-                            elseif i<2 then --operator was not found
-                                R[#R+1]=#o>0 and o:sub(1,1)or nil
-                                o=o:sub(2)
                             end
                         end
+                        --WORD
+                        R[#R+1]=#w>0 and w or nil --save word and undefined values. Oh wait... I removed *undefined* variable long time ago...
                     end
-                    
-                    --WORD
-                    R[#R+1]=#w>0 and w or nil --save word and undefined values. Oh wait... I removed *undefined* variable long time ago...
                 end 
             end
             --FINISH COMPILE
@@ -182,7 +193,7 @@ L=function(x,name,mode,env)
     return NL(x,name,mode,env)
 end
 --load other features of compiler using compiler it self (can be used as example of C SuS SuS programming)
-a,b=L([[<E,K,F>
+a,b=L([[<E,K,F,dbg>
 --0b0000000 and 0o0000.000 number format support (avaliable exponenta: E+-x)
 F.b={C->--return function that will be inserted in special extensions table
     C,o,w=>
@@ -193,12 +204,12 @@ F.b={C->--return function that will be inserted in special extensions table
         /|b?--number exist
          |t,r=t||(a>"b"&&"8"||"2"),0 --You are a good person if you read this (^_^)
          |for i,k in b:gfind"()(.)"do
-         |   /|k>=t?error("Line "..C.l..":This is not a valid number: 0"..a..b..c);--if number is weird
+         |   /|k>=t?error("SuS["..C.l.."]:This is not a valid number: 0"..a..b..c,3);--if number is weird
          |   r=r+k*t^(#b-i);-- t: number base system, r - result, i - current position in number string
          |r=C.b&&tostring(r/t^#b):sub(3) || r --this is a floating point! recalculate required!
          |C.b=!C.b&&#c<1&&t||nil--floating point support
          |$nil,r..c;;;}-- 17 line
-
+         
 -- leveling function initialiser (breakets counter)
 F.l={C=> --/|C.O["("]?$; --if C.O["("] exist - leveling system already initialized, skip proccess (line 22)
     C.L={{}}
@@ -270,11 +281,12 @@ F.N={C=>
         @a,r=o:match".(.)",C.R
         @b=a && a:match"[.:%[%({]"
         /|b||(C.s&&C.s:find"^[%['\"]")?
+         |    /|a:find"[.:]"&&!o:sub(3):find"^[\0%s]*$"?error("SuS["..C.l.."]:attempt to perform '?"..a.."' on operator:'"..o:sub(3).."'",3);--error if ?. [+-/%]
          |    table.insert(r,C.L[#C.L].st," cssc.nilF(") --Insert a breaket at the start of object!
          |    r[#r+1]=b==":"&&",'"..w.."')"||")"
          |    /|b=="."?
          |        C.pc=#r
-         |        C.S.pc=C,o=>/|o:find"^%("?table.insert(C.R,C.pc,","..C.R[#C.R].."");
+         |        C.S.pc=C,o=>/|o:gsub("\0",""):find"^%("&&C.pc?table.insert(C.R,C.pc,",'"..C.R[#C.R].."'"); --if call then insert index of call
          |        C.pc=nil C.S.ps=nil;;
         \|r[#r+1]=p;;--if a was nil or not [.:] return if then else shortcut
     $s;}
