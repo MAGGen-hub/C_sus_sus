@@ -58,7 +58,7 @@ K={ ["@"]=K[5],--local
     ["!"]=K[9],--not
     [";"]=function(C,o) -- any ";" that stand near ";,)]" or "\n" will be replaced by " end " for ex ";;" equal to " end  end "
               e,a,p=" end ",o:match"(;*) *([\n%S]?)"
-              C.R[#C.R+1]=(#p>0 or#a>1 or(#p<1 and C.s))and e:rep(#a)or";"
+              C.R[#C.R+1]=(#p>0 or#a>1)and e:rep(#a)or";"
               return o:sub(#a+1)
           end},
 
@@ -89,6 +89,16 @@ L=function(x,name,mode,env)
             local R,S,O,po,C,s,t,a,b,l={},{},{},""
             x=x:sub(#c+1) --remove control string to start parsing
             C={O=O,S=S,R=R,F={},c={},l=1} -- initialise control tablet for special functions calls
+                -- Control table specification
+                -- O - enabled operators
+                -- S - enabled special functions
+                -- R - result table
+                -- F - finaliser functions
+                -- c - table with comments
+                -- l - line of code (used to catch errors)
+                -- L - table with levels (in witch breaket we are?)
+                -- s - dubilcate of string mode
+                
             
             --INITIALIZE COMPILLER
             for K,V in c:gfind"([%w_]+)%(?([%w_.]*)"do--load flags that used in control string: K - feature name V - feature argument
@@ -105,9 +115,12 @@ L=function(x,name,mode,env)
             end
             --COMPILE -- o: operator, w: word
             --print(x)
-            for o,w in x:gfind"([^_%P%'\"%[]*[^\n%S]*-?-?%[?=*[%['\"]?%s*)([%w_]*[^%w%p%s]*[^\n%S]*)"do 
+            cnt=1
+            --for o,w in x:gfind"([^_%P%'\"%[]*[^\n%S]*-?-?%[?=*[%['\"]?%s*)([%w_]*[^%w%p%s]*[^\n%S]*)"do
+              for o,w in x:gfind"([%s!#-/:-@\\-^{-~`]*-?-?%[?=*[%['\"]?%s*)([%w_]*[^%w%p%s]*[^\n%S]*)"do
                                         -- see that pattern? Now try to spell it in one breath! =P
                                         -- in this pattern the word (w) will never be "^%s*$"!
+                cnt=cnt+1
                 --LINE COUNTER
                 for i in o:gfind"\n"do C.l=C.l+1 end
                 
@@ -120,9 +133,10 @@ L=function(x,name,mode,env)
                             C.c[#C.c+1]=t
                         else
                             R[#R+1]=t --string fin found, record to table
+                            C.t=3
                         end
                         o,po=po..o:sub(b+1),"" --po if there was previous operator
-                        s,C.s,t=nil --disable string mode
+                        s,t=nil --disable string mode
                     else
                         t=t..o..w
                     end
@@ -137,9 +151,9 @@ L=function(x,name,mode,env)
                     if c or s then
                         s=s or"\n" --(string/long_string/long_comment) or small_comment
                         a=o:find(c or s,1,1)--get start of string
-                        t,w=o:sub(a)..w,"" -- save temp string and errase w
+                        t,w=o:sub(a)..w,"" -- save temp string and errase
                         o=o:sub(0,a-1) -- errase temp string part of operator
-                        C.s=s -- You may think that this is miportant, and yes.. that is.
+                        o=c and o or o..'"' -- add string control character to operator sequence
                     end
                     if c then -- Comment loacted! Skip required (comment skip option was added to make sure that the `word` will be empty only if string located or there is no word)
                               -- Option example: this code: "a.--[[trouble maker comment]]b()" is normal for Lua 
@@ -151,8 +165,8 @@ L=function(x,name,mode,env)
                         for k,v in pairs(S) do a,b=v(C,o,w) o,w=a or o,b or w end --call all funcs and save new o,w if they exist as return result
                         --OPERATOR PARCE
                         while #o>0 do
-                            --a=o:match"^%s+" --this code was made to decrase the length of result table and allow spacing in operators capture section 
-                            --if a then R[#R],o=(R[#R]or"")..a,o:sub(#a+1)end --(greatly increases speed of compiller) allow to skip more than 50 gfind calls
+                            a=o:match"^%s+" --this code was made to decrase the length of result table and allow spacing in operators capture section 
+                            if a then R[#R],o=(R[#R]or"")..a,o:sub(#a+1)end --(greatly increases speed of compiller) allow to skip more than 35%+ gfind calls
                             
                             for i=3,1,-1 do --WARNING! Max operator length: 3    
                                 a=O[o:match((".?"):rep(i))] -- a variable here used to store enabled_operators[posible operator]
@@ -167,7 +181,7 @@ L=function(x,name,mode,env)
                                     break -- operator found! break out...
                                 elseif i<2 then --operator was not found
                                     a=o:sub(1,1)
-                                    R[#R+1]=#o>0 and (a=="\0" and (table.remove(C.c,1)or"") or a) or nil -- \0 - comment operator
+                                    R[#R+1]=#o>0 and(a=="\0"and(table.remove(C.c,1)or"")or a=='"'and""or a)or nil -- \0 - comment operator
                                     o=o:sub(2)
                                 end
                             end
@@ -180,6 +194,7 @@ L=function(x,name,mode,env)
             --FINISH COMPILE
             R[#R+1]=t --fininsh last comment if exist
             for k,v in pairs(C.F) do v(C,k) end --launch all finalizer function
+            print("cnt",cnt)
             x=table.concat(R)
             i=0
             for r=1,#R do
@@ -209,7 +224,7 @@ F.b={C->--return function that will be inserted in special extensions table
          |r=C.b&&tostring(r/t^#b):sub(3) || r --this is a floating point! recalculate required!
          |C.b=!C.b&&#c<1&&t||nil--floating point support
          |$nil,r..c;;;}-- 17 line
-         
+
 -- leveling function initialiser (breakets counter)
 F.l={C=> --/|C.O["("]?$; --if C.O["("] exist - leveling system already initialized, skip proccess (line 22)
     C.L={{}}
@@ -299,7 +314,7 @@ F.C={C=>
     ;
 }
 
-]],"SuS",nil,_ENV)
+]],"SuS",nil,_ENV)--]=]
 b=b and error(b)
 a=a and a(...)
 
