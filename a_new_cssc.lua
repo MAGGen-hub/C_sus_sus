@@ -97,7 +97,6 @@ L=function(x,name,mode,env)
                 -- c - table with comments
                 -- l - line of code (used to catch errors)
                 -- L - table with levels (in witch breaket we are?)
-                -- s - dubilcate of string mode
                 
             
             --INITIALIZE COMPILLER
@@ -120,25 +119,22 @@ L=function(x,name,mode,env)
               for o,w in x:gfind"([%s!#-/:-@\\-^{-~`]*-?-?%[?=*[%['\"]?%s*)([%w_]*[^%w%p%s]*[^\n%S]*)"do
                                         -- see that pattern? Now try to spell it in one breath! =P
                                         -- in this pattern the word (w) will never be "^%s*$"!
-                cnt=cnt+1
+                
+                cnt=cnt+1 -- this cycle counter used to debug and optimise C SuS SuS parcer
                 --LINE COUNTER
                 for i in o:gfind"\n"do C.l=C.l+1 end
                 
                 --STRING MODE: string or comment located and must be captured
                 if s then
                     a,b=o:find(#s<2 and "\\*[\n"..s.."]"or "%]=*%]") --locate posible end of string (depends on string type)
-                    if a and(#s<2 and(s=="\n"or b-a%2<1)or #s==b-a+1)then --is it really the end of string?
-                        t=t..o:sub(0,b)
-                        if c then --comment mode
-                            C.c[#C.c+1]=t
-                        else
-                            R[#R+1]=t --string fin found, record to table
-                            C.t=3
-                        end
-                        o,po=po..o:sub(b+1),"" --po if there was previous operator
-                        s,t=nil --disable string mode
+                    if a and(#s<2 and(s=="\n"or b-a%2<1)or #s==b-a+1)then -- end of something found, check is it our string end or not
+                        t=t..o:sub(0,b) --finish string
+                        c=c and C.c or R --choose table to insert
+                        c[#c+1]=t -- insert object
+                        o,po=po..o:sub(b+1),"" --form new operators sequence
+                        s=nil --disable string mode
                     else
-                        t=t..o..w
+                        t=t..o..w --continue string
                     end
                 end
                 
@@ -155,9 +151,7 @@ L=function(x,name,mode,env)
                         o=o:sub(0,a-1) -- errase temp string part of operator
                         o=c and o or o..'"' -- add string control character to operator sequence
                     end
-                    if c then -- Comment loacted! Skip required (comment skip option was added to make sure that the `word` will be empty only if string located or there is no word)
-                              -- Option example: this code: "a.--[[trouble maker comment]]b()" is normal for Lua 
-                              -- but if you replace "." with C SuS SuS "?." without comment skip it will be parced incorrectly!
+                    if c then
                         po=o.."\0"--set previous operator
                     else 
                         l=#o --save length
@@ -305,8 +299,6 @@ F.N={C=>
          |        C.pc=nil C.S.ps=nil;;
         \|r[#r+1]=p;;--if a was nil or not [.:] return if then else shortcut
     $s;}
-    
---WARNING! WARNING! WARNING! COMENTARY SKIP FEATURE REQUIRED!!! COMENTARY SKIP FEATURE REQUIRED! REBUILD MAIN COMPILLER!!!
     
 -- C++ feature TODO!
 F.C={C=>
