@@ -88,7 +88,7 @@ L=function(x,name,mode,env)
             --INITIALISE LOCALS
             local R,S,O,po,C,s,t,a,b,l={},{},{},""
             x=x:sub(#c+1) --remove control string to start parsing
-            C={O=O,S=S,R=R,F={},c={},l=1} -- initialise control tablet for special functions calls
+            C={O=O,S=S,R=R,F={},c={},l=1,pv=1} -- initialise control tablet for special functions calls
                 -- Control table specification
                 -- O - enabled operators
                 -- S - enabled special functions
@@ -97,26 +97,24 @@ L=function(x,name,mode,env)
                 -- c - table with comments
                 -- l - line of code (used to catch errors)
                 -- L - table with levels (in witch breaket we are?)
+                -- p - previous value (can be an operator, a word or string)
                 
             
             --INITIALIZE COMPILLER
             for K,V in c:gfind"([%w_]+)%(?([%w_.]*)"do--load flags that used in control string: K - feature name V - feature argument
                 if F[K]then -- feature exist
                     for k,v in pairs(F[K])do O[k]=v end
-                    S[K]=F[K][1] and F[K][1](C,V,x)-- [1] index is used to store special compiller directives
-                end                                   -- if special has argumet V ex: "<pre(V)>" then F["pre"][1](ctrl_table,"V")
+                    S[K]=F[K][1] and F[K][1](C,V,x,name,mode,env)-- [1] index is used to store special compiller directives
+                end                                              -- if special has argumet V ex: "<pre(V)>" then F["pre"][1](ctrl_table,"V")
             end
             O[1]=nil -- remove trash from current_operators table (all specials in S table now)
             
             --PRELOAD CHECK
-            if S.pre then --pre(*something*) exist! if cssc.pre.*something* exist it will be loaded instead of compiling code again...
-                --TODO!
-            end
+            if S.pre then return S.pre end
+            
             --COMPILE -- o: operator, w: word
-            --print(x)
             cnt=1
-            --for o,w in x:gfind"([^_%P%'\"%[]*[^\n%S]*-?-?%[?=*[%['\"]?%s*)([%w_]*[^%w%p%s]*[^\n%S]*)"do
-              for o,w in x:gfind"([%s!#-/:-@\\-^{-~`]*-?-?%[?=*[%['\"]?%s*)([%w_]*[^%w%p%s]*[^\n%S]*)"do
+            for o,w in x:gfind"([%s!#-/:-@\\-^{-~`]*-?-?%[?=*[%['\"]?%s*)([%w_]*[^%w%p%s]*[^\n%S]*)"do
                                         -- see that pattern? Now try to spell it in one breath! =P
                                         -- in this pattern the word (w) will never be "^%s*$"!
                 
@@ -129,9 +127,10 @@ L=function(x,name,mode,env)
                     a,b=o:find(#s<2 and "\\*[\n"..s.."]"or "%]=*%]") --locate posible end of string (depends on string type)
                     if a and(#s<2 and(s=="\n"or b-a%2<1)or #s==b-a+1)then -- end of something found, check is it our string end or not
                         t=t..o:sub(0,b) --finish string
+                        C.pv=c and C.pv or#R+1
                         c=c and C.c or R --choose table to insert
                         c[#c+1]=t -- insert object
-                        o,po=po..o:sub(b+1),"" --form new operators sequence
+                        o=po..o:sub(b+1) --form new operators sequence
                         s=nil --disable string mode
                     else
                         t=t..o..w --continue string
@@ -140,27 +139,25 @@ L=function(x,name,mode,env)
                 
                 --DEFAULT MODE: main compiler part
                 if not s then
-                
                     --STRING LOCATOR
                     c=o:match"%-%-" --if start found: init str_mode
                     s=o:match"%[=*%["or o:match"['\"]"
                     if c or s then
                         s=s or"\n" --(string/long_string/long_comment) or small_comment
                         a=o:find(c or s,1,1)--get start of string
-                        t,w=o:sub(a)..w,"" -- save temp string and errase
-                        o=o:sub(0,a-1) -- errase temp string part of operator
-                        o=c and o or o..'"' -- add string control character to operator sequence
+                        t,w=o:sub(a)..w,"" -- save temp string and errase word
+                        o=o:sub(0,a-1)..(c and"\0"or'"') -- correct opeartor seq add control character
+                        po=c and o or""
                     end
-                    if c then
-                        po=o.."\0"--set previous operator
-                    else 
+                    
+                    if not c then 
                         l=#o --save length
                         --SPECIAL FUNCTIONS (they usualy work with "R" table and not changing words or operators (if it not new keyword or number format))
                         for k,v in pairs(S) do a,b=v(C,o,w) o,w=a or o,b or w end --call all funcs and save new o,w if they exist as return result
                         --OPERATOR PARCE
                         while #o>0 do
                             a=o:match"^%s+" --this code was made to decrase the length of result table and allow spacing in operators capture section 
-                            if a then R[#R],o=(R[#R]or"")..a,o:sub(#a+1)end --(greatly increases speed of compiller) allow to skip more than 35%+ gfind calls
+                            if a then R[#R],o=(R[#R]or"")..a,o:sub(#a+1)end
                             
                             for i=3,1,-1 do --WARNING! Max operator length: 3    
                                 a=O[o:match((".?"):rep(i))] -- a variable here used to store enabled_operators[posible operator]
@@ -172,31 +169,30 @@ L=function(x,name,mode,env)
                                         a,b=a(C,o,w) --if there is a special replacement function
                                         o,w=a or o:sub(i+1),b or w
                                     end
+                                    --C.pv=#R
                                     break -- operator found! break out...
                                 elseif i<2 then --operator was not found
                                     a=o:sub(1,1)
-                                    R[#R+1]=#o>0 and(a=="\0"and(table.remove(C.c,1)or"")or a=='"'and""or a)or nil -- \0 - comment operator
+                                    R[#R+1]=#o>0 and(a=="\0"and(table.remove(C.c,1)or"")or a=='"'and""or a)or nil -- \0 - comment operator " -- string mark (always at end of seq)
                                     o=o:sub(2)
                                 end
                             end
                         end
                         --WORD
                         R[#R+1]=#w>0 and w or nil --save word and undefined values. Oh wait... I removed *undefined* variable long time ago...
+                        --C.pv=#w>0 and #R or C.pv
                     end
                 end 
             end
+            
             --FINISH COMPILE
             R[#R+1]=t --fininsh last comment if exist
-            for k,v in pairs(C.F) do v(C,k) end --launch all finalizer function
+            a,b=nil
+            for k,v in pairs(C.F) do a,b=v(C,k,x,name,mode,env) end --launch all finalizer function
+            if a or b then return a,b end -- if finaliser return something then return it vithout calling native load
             print("cnt",cnt)
             x=table.concat(R)
-            i=0
-            for r=1,#R do
-               i=i+(R[r]:match"^%s$"and 1 or 0) 
-            end
-            --custom modes
-            if mode=="s"then return x end --return parced data as string
-            if mode=="c"then return R end --return parced data as table
+            if mode=="c"then return R end
         end
     end
     return NL(x,name,mode,env)
@@ -242,8 +238,8 @@ F.s={C=>--line26
     for i in("([{"):gfind"."do
     C.O[i]=C,o=>
         @r=C.R[#C.R]
-        /|k[r:match"%w*"] ||!r:find"[%w_]"?C.L[#C.L].st=#C.R+1;
-        f(C,o)
+        /|k[r:match"%w*"] ||!r:find"[%w_]"?C.L[#C.L].st=#C.R+1; --object might start with "(":  ("a"):blabla("")
+        f(C,o)--call level
         C.L[#C.L].st=#C.R+1;
     end
     C.L[1].st=1--first start of object is start of file (it must be set to avoid errors)
@@ -255,8 +251,8 @@ F.s={C=>--line26
             -- if . or : are before ("bruh") thats an error and must be catched by lua 
             -- need last value variable to not search for it if o or w will contain "   "
             -- we not paing attention to incode strings because they can't be an object and anything that go straight after string must be the start of obj
+        
         --step 0: check if start object exist but not set
-        --print(#C.L)
         l=C.L[#C.L]
         /|l.pr?l.st,l.pr=#C.R;--set previous word as start
         --step 1: word exist?
@@ -287,10 +283,11 @@ F.N={C=>
     @s=F.s[1](C)--load start searcher!
     @p=C.O["?"]--if E feature was enabled
     C.O["?"]=C,o,w=>
-        @a,r=o:match".(.)",C.R
+        @a,r=o:match".(.)",C.R 
         @b=a && a:match"[.:%[%({]"
+        /|!r[C.pv]||!r[C.pv]:find"[%w_%]%)}\"']%s*$"?error("SuS["..C.l.."]:attempt to perform '?"..a.."' on '"..(C.R[C.pv]or"nil").."'",3);--if previous value was an operator
         /|b||(C.s&&C.s:find"^[%['\"]")?
-         |    /|a:find"[.:]"&&!o:sub(3):find"^[\0%s]*$"?error("SuS["..C.l.."]:attempt to perform '?"..a.."' on operator:'"..o:sub(3).."'",3);--error if ?. [+-/%]
+         |    /|a:find"[.:]"&&!o:sub(3):find"^[\0%s]*$"?error("SuS["..C.l.."]:attempt to perform '"..o:sub(3).."' on '?"..a.."'",3);--error if ?. [+-/%]
          |    table.insert(r,C.L[#C.L].st," cssc.nilF(") --Insert a breaket at the start of object!
          |    r[#r+1]=b==":"&&",'"..w.."')"||")"
          |    /|b=="."?
