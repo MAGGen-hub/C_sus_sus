@@ -86,7 +86,7 @@ L=function(x,name,mode,env)
         if c then --control string exists!
         
             --INITIALISE LOCALS
-            local R,S,O,po,C,s,t,a,b,l={},{},{},""
+            local R,S,O,po,C,s,t,a,b,l={""},{},{},""
             x=x:sub(#c+1) --remove control string to start parsing
             C={O=O,S=S,R=R,F={},c={},l=1,pv=1} -- initialise control tablet for special functions calls
                 -- Control table specification
@@ -156,8 +156,8 @@ L=function(x,name,mode,env)
                         for k,v in pairs(S) do a,b=v(C,o,w) o,w=a or o,b or w end --call all funcs and save new o,w if they exist as return result
                         --OPERATOR PARCE
                         while #o>0 do
-                            a=o:match"^%s+" --this code was made to decrase the length of result table and allow spacing in operators capture section 
-                            if a then R[#R],o=(R[#R]or"")..a,o:sub(#a+1)end
+                            a=o:match"^%s*" --this code was made to decrase the length of result table and allow spacing in operators capture section
+                            R[#R],o=R[#R]..a,o:sub(#a+1)
                             
                             for i=3,1,-1 do --WARNING! Max operator length: 3    
                                 a=O[o:match((".?"):rep(i))] -- a variable here used to store enabled_operators[posible operator]
@@ -177,6 +177,8 @@ L=function(x,name,mode,env)
                                     o=o:sub(2)
                                 end
                             end
+                            --a=o:match"^%s+"
+                            --if a then R[#R],o=R[#R]..a,o:sub(#a+1)end
                         end
                         --WORD
                         R[#R+1]=#w>0 and w or nil --save word and undefined values. Oh wait... I removed *undefined* variable long time ago...
@@ -285,7 +287,7 @@ F.N={C=>
     C.O["?"]=C,o,w=>
         @a,r=o:match".(.)",C.R 
         @b=a && a:match"[.:%[%({]"
-        /|!r[C.pv]||!r[C.pv]:find"[%w_%]%)}\"']%s*$"?error("SuS["..C.l.."]:attempt to perform '?"..a.."' on '"..(C.R[C.pv]or"nil").."'",3);--if previous value was an operator
+        /|!r[C.pv]:find"[%w_%]%)}\"']%s*$"?error("SuS["..C.l.."]:attempt to perform '?"..a.."' on '"..(C.R[C.pv]or"nil").."'",3);--if previous value was an operator
         /|b||(C.s&&C.s:find"^[%['\"]")?
          |    /|a:find"[.:]"&&!o:sub(3):find"^[\0%s]*$"?error("SuS["..C.l.."]:attempt to perform '"..o:sub(3).."' on '?"..a.."'",3);--error if ?. [+-/%]
          |    table.insert(r,C.L[#C.L].st," cssc.nilF(") --Insert a breaket at the start of object!
