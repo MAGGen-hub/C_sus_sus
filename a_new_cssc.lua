@@ -86,7 +86,7 @@ L=function(x,name,mode,env)
         if c then --control string exists!
         
             --INITIALISE LOCALS
-            local R,S,O,po,C,s,t,a,b={""},{},{},""
+            local R,S,O,po,C,s,t,a,b,l={""},{},{},""
             x=x:sub(#c+1) --remove control string to start parsing
             C={O=O,S=S,R=R,F={},c={},l=1,pv=1} -- initialise control tablet for special functions calls
                 -- Control table specification
@@ -114,18 +114,20 @@ L=function(x,name,mode,env)
             
             --COMPILE -- o: operator, w: word
             cnt=1
-            for o,w in x:gfind"([%s!#-&(-/:-@\\-^{-~`]*-?-?%[?=*[%['\"]?%s*)([%w_]*[^%w%p%s]*[^\n%S]*)"do
+            l=#x+1
+            for o,w,i in x:gfind"([%s!#-&(-/:-@\\-^{-~`]*%[?=*[%['\"]?%s*)([%w_]*[^%w%p%s]*[^\n%S]*)()"do
                                         -- see that pattern? Now try to spell it in one breath! =P
                                         -- in this pattern the word (w) will never be "^%s*$"!
                 
                 cnt=cnt+1 -- this cycle counter used to debug and optimise C SuS SuS parcer
                 --LINE COUNTER
-                for i in o:gfind"\n"do C.l=C.l+1 end
-                
+                for v in o:gfind"\n"do C.l=C.l+1 end
                 --STRING MODE: string or comment located and must be captured
                 if s then
+                print("'",s,"'")
                     a,b=o:find(#s<2 and "\\*[\n"..s.."]"or "%]=*%]") --locate posible end of string (depends on string type)
-                    if a and(#s<2 and(s=="\n"or b-a%2<1)or #s==b-a+1)then -- end of something found, check is it our string end or not
+                    if a and(#s<2 and(s=="\n"or b-a%2<1)or #s==b-a+1)or i==l then -- end of something found, check is it our string end or not
+                        b=b or i
                         t=t..o:sub(0,b) --finish string
                         C.pv=c and C.pv or#R+1
                         c=c and C.c or R --choose table to insert
@@ -141,18 +143,19 @@ L=function(x,name,mode,env)
                 --DEFAULT MODE: main compiler part
                 if not s then
                     --STRING LOCATOR
-                    c=o:match"%-%-" --if start found: init str_mode
+                    o=o:gsub("-%-%s-\n","")--remove all empty comments (they may corrupt a lot of things!)
+                    c=o:match"-%-%[?=*%[?" --if start found: init str_mode
                     s=o:match"%[=*%["or o:match"['\"]"
                     if c or s then
-                        s=s or"\n" --(string/long_string/long_comment) or small_comment
-                        a=o:find(c or s,1,1)--get start of string
+                        a=o:find(c or s,1,1)
+                        s=c and(c:sub(3)==s and s or"\n")or s --(string/long_string/long_comment) or small_comment
                         t,w=o:sub(a)..w,"" -- save temp string and errase word
                         o=o:sub(0,a-1)..(c and"\0"or'"') -- correct opeartor seq add control character
-                        po=c and o or"" -- set previous operator
+                        po=c and (o or "") or"" -- set previous operator
                     end
                     
                     --IF NOT COMMENT
-                    if not c then 
+                    if not c or i==l then 
                         --SPECIAL FUNCTIONS (they usualy work with "R" table and not changing words or operators (if it not new keyword or number format))
                         for k,v in pairs(S) do a,b=v(C,o,w) o,w=a or o,b or w end --call all funcs and save new o,w if they exist as return result
                         --OPERATOR PARCE
@@ -160,7 +163,6 @@ L=function(x,name,mode,env)
                             a=o:match"^%s*" --this code was made to decrase the length of result table and allow spacing in operators capture section
                             R[#R]=R[#R]..a
                             o=o:sub(#a+1)
-                            
                             for i=3,1,-1 do --WARNING! Max operator length: 3    
                                 a=O[o:match((".?"):rep(i))] -- a variable here used to store enabled_operators[posible operator]
                                 if a then --if O[posible_operator] -> C SuS SuS enabled operator (or something else) found and must be parced
@@ -175,7 +177,7 @@ L=function(x,name,mode,env)
                                     break -- operator found! break out...
                                 elseif i<2 then --operator was not found
                                     a=o:sub(1,1)
-                                    R[#R+1]=#o>0 and(a=="\0"and table.remove(C.c,1)or a~='"'and a)or nil -- \0 - comment operator " -- string mark (always at end of seq)
+                                    R[#R+1]=#o>0 and(a=="\0"and (table.remove(C.c,1)or"")or a~='"'and a)or nil -- \0 - comment operator " -- string mark (always at end of seq)
                                     o=o:sub(2)
                                 end
                             end
@@ -188,7 +190,6 @@ L=function(x,name,mode,env)
             end
             
             --FINISH COMPILE
-            R[#R+1]=t --fininsh last comment if exist
             a,b=nil
             for k,v in pairs(C.F) do a,b=v(C,k,x,name,mode,env) end --launch all finalizer function
             if a or b then return a,b end -- if finaliser return something then return it vithout calling native load
@@ -300,7 +301,7 @@ F.N={C=>
     $s;}
     
 -- C++ feature TODO!
-F.C={C=>--[=[d]=] --[=[]=] --b
+F.C={C=>--[=[d]=] --[=[bb]=] --
     
     ;
 }
