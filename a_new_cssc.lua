@@ -86,7 +86,7 @@ L=function(x,name,mode,env)
         if c then --control string exists!
         
             --INITIALISE LOCALS
-            local R,S,O,po,C,s,t,a,b,l={""},{},{},""
+            local R,S,O,po,C,s,t,a,b={""},{},{},""
             x=x:sub(#c+1) --remove control string to start parsing
             C={O=O,S=S,R=R,F={},c={},l=1,pv=1} -- initialise control tablet for special functions calls
                 -- Control table specification
@@ -114,7 +114,7 @@ L=function(x,name,mode,env)
             
             --COMPILE -- o: operator, w: word
             cnt=1
-            for o,w in x:gfind"([%s!#-/:-@\\-^{-~`]*-?-?%[?=*[%['\"]?%s*)([%w_]*[^%w%p%s]*[^\n%S]*)"do
+            for o,w in x:gfind"([%s!#-&(-/:-@\\-^{-~`]*-?-?%[?=*[%['\"]?%s*)([%w_]*[^%w%p%s]*[^\n%S]*)"do
                                         -- see that pattern? Now try to spell it in one breath! =P
                                         -- in this pattern the word (w) will never be "^%s*$"!
                 
@@ -131,7 +131,8 @@ L=function(x,name,mode,env)
                         c=c and C.c or R --choose table to insert
                         c[#c+1]=t -- insert object
                         o=po..o:sub(b+1) --form new operators sequence
-                        s=nil --disable string mode
+                        --if s=="'" then print(t)end
+                        s,t=nil --disable string mode
                     else
                         t=t..o..w --continue string
                     end
@@ -147,17 +148,18 @@ L=function(x,name,mode,env)
                         a=o:find(c or s,1,1)--get start of string
                         t,w=o:sub(a)..w,"" -- save temp string and errase word
                         o=o:sub(0,a-1)..(c and"\0"or'"') -- correct opeartor seq add control character
-                        po=c and o or""
+                        po=c and o or"" -- set previous operator
                     end
                     
+                    --IF NOT COMMENT
                     if not c then 
-                        l=#o --save length
                         --SPECIAL FUNCTIONS (they usualy work with "R" table and not changing words or operators (if it not new keyword or number format))
                         for k,v in pairs(S) do a,b=v(C,o,w) o,w=a or o,b or w end --call all funcs and save new o,w if they exist as return result
                         --OPERATOR PARCE
                         while #o>0 do
                             a=o:match"^%s*" --this code was made to decrase the length of result table and allow spacing in operators capture section
-                            R[#R],o=R[#R]..a,o:sub(#a+1)
+                            R[#R]=R[#R]..a
+                            o=o:sub(#a+1)
                             
                             for i=3,1,-1 do --WARNING! Max operator length: 3    
                                 a=O[o:match((".?"):rep(i))] -- a variable here used to store enabled_operators[posible operator]
@@ -169,20 +171,18 @@ L=function(x,name,mode,env)
                                         a,b=a(C,o,w) --if there is a special replacement function
                                         o,w=a or o:sub(i+1),b or w
                                     end
-                                    --C.pv=#R
+                                    C.pv=#R
                                     break -- operator found! break out...
                                 elseif i<2 then --operator was not found
                                     a=o:sub(1,1)
-                                    R[#R+1]=#o>0 and(a=="\0"and(table.remove(C.c,1)or"")or a=='"'and""or a)or nil -- \0 - comment operator " -- string mark (always at end of seq)
+                                    R[#R+1]=#o>0 and(a=="\0"and table.remove(C.c,1)or a~='"'and a)or nil -- \0 - comment operator " -- string mark (always at end of seq)
                                     o=o:sub(2)
                                 end
                             end
-                            --a=o:match"^%s+"
-                            --if a then R[#R],o=R[#R]..a,o:sub(#a+1)end
                         end
                         --WORD
                         R[#R+1]=#w>0 and w or nil --save word and undefined values. Oh wait... I removed *undefined* variable long time ago...
-                        --C.pv=#w>0 and #R or C.pv
+                        C.pv=#w>0 and#R or C.pv
                     end
                 end 
             end
@@ -240,7 +240,7 @@ F.s={C=>--line26
     for i in("([{"):gfind"."do
     C.O[i]=C,o=>
         @r=C.R[#C.R]
-        /|k[r:match"%w*"] ||!r:find"[%w_]"?C.L[#C.L].st=#C.R+1; --object might start with "(":  ("a"):blabla("")
+        /|k[r:match"%w*"]||!r:find"[%w_]"?C.L[#C.L].st=#C.R+1; --object might start with "(":  ("a"):blabla("")
         f(C,o)--call level
         C.L[#C.L].st=#C.R+1;
     end
@@ -271,10 +271,10 @@ F.s={C=>--line26
 
 -- nil forgiving function initialiser
 do
-@c,d={},{}--nil returning object | nilF feature: nil forgiving operators | d -> default c-> colon
-setmetatable(d,{__call=->nil;,__index=->nil;})
-setmetatable(c,{__index=->()->;;})
---nill forgiving call
+@c,d=setmetatable--nil returning object | nilF feature: nil forgiving operators | d -> default c-> colon
+d=c({},{__call=->nil;,__index=->nil;})
+c=c({},{__index=->()->nil;;})
+
 N=(o,i)=>-- o -> object, i -> index
     /|o==nil?$i&&c||d; --> obj not exist (false and other variables are allowed
     /|i?$o[i]&&o||c; --> obj and index exist -> colon mode
@@ -286,9 +286,9 @@ F.N={C=>
     @p=C.O["?"]--if E feature was enabled
     C.O["?"]=C,o,w=>
         @a,r=o:match".(.)",C.R 
-        @b=a && a:match"[.:%[%({]"
+        @b=a && a:match'[.:%[%({"]'
         /|!r[C.pv]:find"[%w_%]%)}\"']%s*$"?error("SuS["..C.l.."]:attempt to perform '?"..a.."' on '"..(C.R[C.pv]or"nil").."'",3);--if previous value was an operator
-        /|b||(C.s&&C.s:find"^[%['\"]")?
+        /|b?
          |    /|a:find"[.:]"&&!o:sub(3):find"^[\0%s]*$"?error("SuS["..C.l.."]:attempt to perform '"..o:sub(3).."' on '?"..a.."'",3);--error if ?. [+-/%]
          |    table.insert(r,C.L[#C.L].st," cssc.nilF(") --Insert a breaket at the start of object!
          |    r[#r+1]=b==":"&&",'"..w.."')"||")"
@@ -300,7 +300,7 @@ F.N={C=>
     $s;}
     
 -- C++ feature TODO!
-F.C={C=>
+F.C={C=>--[=[d]=] --[=[]=] --b
     
     ;
 }
