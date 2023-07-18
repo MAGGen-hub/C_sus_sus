@@ -326,7 +326,7 @@ F.N={C=>
         \|r[#r+1]=p&&p||"?";;;}--if a was nil or not [.:] return if then else shortcut (if it not enabled -> let lua parce '?' as an error)
     
 --This table contain all operators with *operator*= support "+= -= *= ..."
-Ck={"+","-","*","%","/","..","&&","||","//","&","|",">>","<<"}
+--Ck={"+","-","*","%","/","..","&&","||","//","&","|",">>","<<"}
 
 -- Ariphmetic end searcher needed
 -- C++ feature
@@ -365,4 +365,4 @@ F.B={
 b=b and error(b)
 a=a and a(...)
 
-_G.cssc={features=F,lua_keywords=K,load=L,nilF=N,op_equal=Ck,version="3.4-beta"}
+_G.cssc={features=F,lua_keywords=K,load=L,nilF=N,version="3.4-beta"}
