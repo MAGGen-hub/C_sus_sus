@@ -97,11 +97,11 @@ L=function(x,name,mode,env)
                 -- c - table with comments
                 -- l - line of code (used to catch errors)
                 -- L - table with levels (in witch breaket we are?)
-                -- p - previous value (can be an operator, a word or string)
+                -- pv - previous value (can be an operator, a word or string)
                 
             
             --INITIALIZE COMPILLER
-            for K,V in c:gfind"([%w_]+)%(?([%w_.]*)"do--load flags that used in control string: K - feature name V - feature argument
+            for K,V in c:gmatch"([%w_]+)%(?([%w_. ]*)"do--load flags that used in control string: K - feature name V - feature argument
                 if F[K]then -- feature exist
                     for k,v in pairs(F[K])do O[k]=v end
                     S[K]=F[K][1] and F[K][1](C,V,x,name,mode,env)-- [1] index is used to store special compiller directives
@@ -115,16 +115,15 @@ L=function(x,name,mode,env)
             --COMPILE -- o: operator, w: word
             cnt=1
             l=#x+1
-            for o,w,i in x:gfind"([%s!#-&(-/:-@\\-^{-~`]*%[?=*[%['\"]?%s*)([%w_]*[^%w%p%s]*[^\n%S]*)()"do
+            for o,w,i in x:gmatch"([%s!#-&(-/:-@\\-^{-~`]*%[?=*[%['\"]?%s*)([%w_]*[^%w%p%s]*[^\n%S]*)()"do
                                         -- see that pattern? Now try to spell it in one breath! =P
                                         -- in this pattern the word (w) will never be "^%s*$"!
                 
                 cnt=cnt+1 -- this cycle counter used to debug and optimise C SuS SuS parcer
                 --LINE COUNTER
-                for v in o:gfind"\n"do C.l=C.l+1 end
+                o:gsub("\n",function()C.l=C.l+1 end)
                 --STRING MODE: string or comment located and must be captured
                 if s then
-                print("'",s,"'")
                     a,b=o:find(#s<2 and "\\*[\n"..s.."]"or "%]=*%]") --locate posible end of string (depends on string type)
                     if a and(#s<2 and(s=="\n"or b-a%2<1)or #s==b-a+1)or i==l then -- end of something found, check is it our string end or not
                         b=b or i
@@ -157,7 +156,7 @@ L=function(x,name,mode,env)
                     --IF NOT COMMENT
                     if not c or i==l then 
                         --SPECIAL FUNCTIONS (they usualy work with "R" table and not changing words or operators (if it not new keyword or number format))
-                        for k,v in pairs(S) do a,b=v(C,o,w) o,w=a or o,b or w end --call all funcs and save new o,w if they exist as return result
+                        for k,v in pairs(S) do a,b=v(C,o,w,i) o,w=a or o,b or w end --call all funcs and save new o,w if they exist as return result
                         --OPERATOR PARCE
                         while #o>0 do
                             a=o:match"^%s*" --this code was made to decrase the length of result table and allow spacing in operators capture section
@@ -170,17 +169,19 @@ L=function(x,name,mode,env)
                                         R[#R+1]=" "..a.." "
                                         o=o:sub(i+1)
                                     else
-                                        a,b=a(C,o,w) --if there is a special replacement function
+                                        a,b=a(C,o,w,i) --if there is a special replacement function
                                         o,w=a or o:sub(i+1),b or w
                                     end
-                                    C.pv=#R
+                                    --C.pv=#R
                                     break -- operator found! break out...
                                 elseif i<2 then --operator was not found
                                     a=o:sub(1,1)
+                                    --C.pv=a=="\0"and C.pv or #R+1
                                     R[#R+1]=#o>0 and(a=="\0"and (table.remove(C.c,1)or"")or a~='"'and a)or nil -- \0 - comment operator " -- string mark (always at end of seq)
                                     o=o:sub(2)
                                 end
                             end
+                            C.pv=a=="\0"and C.pv or #R
                         end
                         --WORD
                         R[#R+1]=#w>0 and w or nil --save word and undefined values. Oh wait... I removed *undefined* variable long time ago...
@@ -191,9 +192,9 @@ L=function(x,name,mode,env)
             
             --FINISH COMPILE
             a,b=nil
-            for k,v in pairs(C.F) do a,b=v(C,k,x,name,mode,env) end --launch all finalizer function
+            for k,v in pairs(C.F) do a,b=v(C,x,name,mode,env) end --launch all finalizer function
             if a or b then return a,b end -- if finaliser return something then return it vithout calling native load
-            print("cnt",cnt)
+            --print("cnt",cnt)
             x=table.concat(R)
             if mode=="c"then return R end
         end
@@ -202,6 +203,27 @@ L=function(x,name,mode,env)
 end
 --load other features of compiler using compiler it self (can be used as example of C SuS SuS programming)
 a,b=L([[<E,K,F,dbg>
+
+--local keyword access table
+@Kt={}
+for i=1,21 do Kt[K[i] ]=1 end
+
+--Error detector
+err=C,s=>C.err=C.err or "SuS["..C.l.."]:"..s;
+
+F.err={C=>
+    C.F.err=C=>
+        /|C.err?$ nil,C.err;;;}
+
+--Debug feature
+F.dbg={C,V=> -- V - argument
+    @v=V
+    C.F.dbg=C,x,n,m=>
+        /|v=="P"?require"cc.pretty".pretty_print(C.R)
+        \|print(table.concat(C.R));
+        /|m=="c"?$R
+        :|m=="s"?table.concat(R);;;}
+    
 --0b0000000 and 0o0000.000 number format support (avaliable exponenta: E+-x)
 F.b={C->--return function that will be inserted in special extensions table
     C,o,w=>
@@ -210,16 +232,17 @@ F.b={C->--return function that will be inserted in special extensions table
         \|C.b=nil;
         -- 8 line
         /|b?--number exist
-         |t,r=t||(a>"b"&&"8"||"2"),0 --You are a good person if you read this (^_^)
-         |for i,k in b:gfind"()(.)"do
-         |   /|k>=t?error("SuS["..C.l.."]:This is not a valid number: 0"..a..b..c,3);--if number is weird
-         |   r=r+k*t^(#b-i);-- t: number base system, r - result, i - current position in number string
-         |r=C.b&&tostring(r/t^#b):sub(3) || r --this is a floating point! recalculate required!
-         |C.b=!C.b&&#c<1&&t||nil--floating point support
-         |$nil,r..c;;;}-- 17 line
+          t,r=t||(a>"b"&&"8"||"2"),0 --You are a good person if you read this (^_^)
+          for i,k in b:gmatch"()(.)"do
+             /|k>=t?err(C,"This is not a valid number: 0"..a..b..c);--if number is weird
+             r=r+k*t^(#b-i)-- t: number base system, r - result, i - current position in number string
+                                   end
+          r=C.b&&tostring(r/t^#b):sub(3)||r --this is a floating point! recalculate required!
+          C.b=!C.b&&#c<1&&t||nil--floating point support
+          $nil,r..c;;;}-- 17 line
 
 -- leveling function initialiser (breakets counter)
-F.l={C=> --/|C.O["("]?$; --if C.O["("] exist - leveling system already initialized, skip proccess (line 22)
+F.l={C=> /|C.O["("]?$; --if C.O["("] exist - leveling system already initialized, skip proccess (line 22)
     C.L={{}}
     @p="([{}])"
     for k in p:gfind"(.)"do
@@ -228,25 +251,26 @@ F.l={C=> --/|C.O["("]?$; --if C.O["("] exist - leveling system already initializ
             C.R[#C.R+1]=o
             o=p:find("%"..o)<4
             C.L[#C.L+(o&&1||0)]=o&&{}||nil;
-    end;}                               -- This code is hard to understand because
+                        end;}
+                                        -- This code is hard to understand because
                                         -- it was sponsored by Peppino Spagetti from Pizza Tower PC game
 
 --start searcher initialiser
-F.s={C=>--line26
+F.s={C=>
     --init leveling function
     F.l[1](C)
+    /|C.L[1].st?$; -- Searcher was inited before! Skip!
     @f=C.O["("]
-    @k={}
-    for i=1,21 do k[K[i] ]=i end
-    for i in("([{"):gfind"."do
+    for i in("([{"):gmatch"."do
     C.O[i]=C,o=>
         @r=C.R[#C.R]
-        /|k[r:match"%w*"]||!r:find"[%w_]"?C.L[#C.L].st=#C.R+1; --object might start with "(":  ("a"):blabla("")
+        /|Kt[r:match"%w*"]||!r:find"[%w_]"?C.L[#C.L].st=#C.R+1; --object might start with "(":  ("a"):blabla("")
         f(C,o)--call level
         C.L[#C.L].st=#C.R+1;
-    end
+                            end
+        
     C.L[1].st=1--first start of object is start of file (it must be set to avoid errors)
-    $C,o,w=> -- Cow says "MOOO"; F.s says "start of object is here *table index*"
+    C.S.s=C,o,w=> -- Cow says "MOOO"; F.s says "start of object is here *table index*"
         --forward operator parcing 
             --what is the start of the object?
             -- object in Lua can start with () or word:  ("bruh"):sub(1,1) or string.sub("bruh",1,1) --numbers here are not important but thay also objects
@@ -256,7 +280,7 @@ F.s={C=>--line26
             -- we not paing attention to incode strings because they can't be an object and anything that go straight after string must be the start of obj
         
         --step 0: check if start object exist but not set
-        l=C.L[#C.L]
+        @l=C.L[#C.L]
         /|l.pr?l.st,l.pr=#C.R;--set previous word as start
         --step 1: word exist?
         /|#w<1?$; --return if not
@@ -266,7 +290,7 @@ F.s={C=>--line26
         /|o:find"^[%w_]"?l.st=#C.R+1 $; -- if o is word then actual operator is empty and obj start was at the index of "w" variable #C.R+1
         @a=o:match"(%.?[.:])%s*$"--if this part reached o is an operator and must be anything but not "." or ":"
         --keyword ckeck
-        /|a && #a<2 ?$;--word has a "." or ":" before it
+        /|a&&#a<2?$;--word has a "." or ":" before it
         --finaly start object is located and can be setted on next cycle (operator string might be not empty end ruin the code if l.st=#C.R set before parce)
         l.pr=1;;} --;; -> ends to both lambdas
 
@@ -283,31 +307,62 @@ N=(o,i)=>-- o -> object, i -> index
 end
 -- not null check feature! Must be loaded after E for E support
 F.N={C=>
-    @s=F.s[1](C)--load start searcher!
+    F.s[1](C)--load start searcher!
     @p=C.O["?"]--if E feature was enabled
+    @e="Attempt to perform '"
     C.O["?"]=C,o,w=>
-        @a,r=o:match".(.)",C.R 
+        @a,r=o:match".(.)",C.R
         @b=a && a:match'[.:%[%({"]'
-        /|!r[C.pv]:find"[%w_%]%)}\"']%s*$"?error("SuS["..C.l.."]:attempt to perform '?"..a.."' on '"..(C.R[C.pv]or"nil").."'",3);--if previous value was an operator
+        /|!r[C.pv]:find"[%w_%]%)}\"']%s*$"?err(C,e.."?"..a.."' on '"..(r[C.pv]or"nil").."'");--if previous value was an operator
         /|b?
-         |    /|a:find"[.:]"&&!o:sub(3):find"^[\0%s]*$"?error("SuS["..C.l.."]:attempt to perform '"..o:sub(3).."' on '?"..a.."'",3);--error if ?. [+-/%]
-         |    table.insert(r,C.L[#C.L].st," cssc.nilF(") --Insert a breaket at the start of object!
-         |    r[#r+1]=b==":"&&",'"..w.."')"||")"
-         |    /|b=="."?
-         |        C.pc=#r
-         |        C.S.pc=C,o=>/|o:gsub("\0",""):find"^%("&&C.pc?table.insert(C.R,C.pc,",'"..C.R[#C.R].."'"); --if call then insert index of call
-         |        C.pc=nil C.S.ps=nil;;
-        \|r[#r+1]=p;;--if a was nil or not [.:] return if then else shortcut
-    $s;}
+            /|a:find"[.:]"&&!o:sub(3):find"^[\0%s]*$"?err(C,e..o:sub(3).."' on '?"..a.."'");--error if ?[.:] has operators but not word after it 
+            table.insert(r,C.L[#C.L].st," cssc.nilF(") --Insert a breaket at the start of object!
+            r[#r+1]=b==":"&&",'"..w.."')"||")"--Call required! Insert an 'index'!
+            /|b=="."?
+                C.pc=#r -- Index detected, and call check required!
+                C.S.pc=C,o=>
+                    /|o:gsub("\0",""):find"^%("&&C.pc?table.insert(C.R,C.pc,",'"..C.R[#C.R].."'"); --Call required! Insert an 'index'!
+                    C.pc=nil C.S.pc=nil;;
+        \|r[#r+1]=p&&p||"?";;;}--if a was nil or not [.:] return if then else shortcut (if it not enabled -> let lua parce '?' as an error)
     
--- C++ feature TODO!
-F.C={C=>--[=[d]=] --[=[bb]=] --
+--This table contain all operators with *operator*= support "+= -= *= ..."
+Ck={"+","-","*","%","/","..","&&","||","//","&","|",">>","<<"}
+
+-- Ariphmetic end searcher needed
+-- C++ feature
+F.C={C=>
+    F.s[1](C)--load start searcher
+    C.EQ={"+","-","*","%","/","..",unpack(C.EQ||{})}--unpack here for functions that added something into C.EQ before
+    --function to end to "ariphmetical" expression with breaket
+    @es=C,o,w=>
+        @k={["and"]=1,["or"]=1}
+        @r=C.R
+        /|(o:find"[%)%]}][%s\0]*"||o:find"^[%s\0]*$"&&
+          (r[C.pv]:find"^['\"%[].*[%]'\"]%s*$"||!Kt[r[C.pv]:match"%S"]))
+          &&#w>0&&!k[w:match"%S"]? -- if operator was a breaket or previous value was a word (not keyword) or string and current word is not "and" or "or"
+            o=o..")"C.S.aes=nil;; --insert a breaket and remove function from special compiller directives  
     
+    @f=C,o,w=>
+        o=o:match"(.-)=" --for this we need only the first part of operator
+        @t=type(C.O[o])
+        @r=C.R
+        /|t>3? --Type is not nil! Parce required! C SuS SuS operator!
+            /|t<7?t=" "..C.O[o].." " --string
+            \|t=C.O[o](C,o,w,-1); --function direct call (if i < 0)
+            o=t;
+        r[#r+1]="="--insert equality 
+        for i=C.L[#C.L].st,#r-1 do --copy variable from the start of an object
+        ;
+            
+    for i=1,#k do C.O[Ck[i] ]=f end --initialise all
     ;
 }
 
+F.B={
+
+}
 ]],"SuS",nil,_ENV)--]=]
 b=b and error(b)
 a=a and a(...)
 
-_G.cssc={features=F,lua_keywords=K,load=L,nilF=N}
+_G.cssc={features=F,lua_keywords=K,load=L,nilF=N,op_equal=Ck,version="3.4-beta"}
