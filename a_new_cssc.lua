@@ -262,11 +262,11 @@ F.s={C=>
     /|C.L[1].st?$; -- Searcher was inited before! Skip!
     @f=C.O["("]
     for i in("([{"):gmatch"."do
-    C.O[i]=C,o=>
-        @r=C.R[#C.R]
-        /|Kt[r:match"%w*"]||!r:find"[%w_]"?C.L[#C.L].st=#C.R+1; --object might start with "(":  ("a"):blabla("")
-        f(C,o)--call level
-        C.L[#C.L].st=#C.R+1;
+        C.O[i]=C,o=>
+            @r=C.R[#C.R]
+            /|Kt[r:match"%w*"]||!r:find"[%w_]"?C.L[#C.L].st=#C.R+1; --object might start with "(":  ("a"):blabla("")
+            f(C,o)--call level
+            C.L[#C.L].st=#C.R+1;
                             end
         
     C.L[1].st=1--first start of object is start of file (it must be set to avoid errors)
@@ -324,25 +324,46 @@ F.N={C=>
                     /|o:gsub("\0",""):find"^%("&&C.pc?table.insert(C.R,C.pc,",'"..C.R[#C.R].."'"); --Call required! Insert an 'index'!
                     C.pc=nil C.S.pc=nil;;
         \|r[#r+1]=p&&p||"?";;;}--if a was nil or not [.:] return if then else shortcut (if it not enabled -> let lua parce '?' as an error)
-    
---This table contain all operators with *operator*= support "+= -= *= ..."
---Ck={"+","-","*","%","/","..","&&","||","//","&","|",">>","<<"}
+
+
 
 -- Ariphmetic end searcher needed
+
+--Add initialiser function to F.K feature to enable support of &&= and ||= 
+F.K[1]=C=>C.EQ={"&&","||",unpack(C.EQ||{})};
+
 -- C++ feature
 F.C={C=>
     F.s[1](C)--load start searcher
-    C.EQ={"+","-","*","%","/","..",unpack(C.EQ||{})}--unpack here for functions that added something into C.EQ before
-    --function to end to "ariphmetical" expression with breaket
-    @es=C,o,w=>
-        @k={["and"]=1,["or"]=1}
-        @r=C.R
-        /|(o:find"[%)%]}][%s\0]*"||o:find"^[%s\0]*$"&&
-          (r[C.pv]:find"^['\"%[].*[%]'\"]%s*$"||!Kt[r[C.pv]:match"%S"]))
-          &&#w>0&&!k[w:match"%S"]? -- if operator was a breaket or previous value was a word (not keyword) or string and current word is not "and" or "or"
-            o=o..")"C.S.aes=nil;; --insert a breaket and remove function from special compiller directives  
     
-    @f=C,o,w=>
+    --EQ - table with operators that support *op*= behaviour
+    C.EQ={"+","-","*","%","/","..",unpack(C.EQ||{})}--unpack here for functions that added something into C.EQ before
+    --override leveling function ends
+    @f=C.O[")"]
+    --binary keyword operators
+    @k={["and"]=1,["or"]=2}
+    
+    --breaket end searcher
+    for i in("}])"):gmatch"."do
+        C.O[i]=C,o,w=>
+            @l=C.L
+            /|l[#l].nd?C.R[#C.R+1]=")"; --Warning! This code MUST not work! If it worked then 
+            f(C,o)
+            /|l[#l].nd&&(o:find".[%s\0]*[,;}]"||(o:find"^[%s\0]*$"&&!k[w:match"%S"]))?
+                C.R[#C.R+1]=")"
+                l[#l].nd=nil;;--end required for this level and (next operator equal to ",;}" or empty and word is not equal to "and" or "or")
+                            end
+    
+    -- normal end searcher
+    @es=C,o,w=>
+        /|C.L[#C.L].nd?
+            @p=C.R[C.pv]
+            /|o:find"^[%s\0]*$"&&(p:find"[%w_]"||p:find"^['\"%[][%]'\"]$")&&!k[w:match"%S"]?
+                C.R[#C.R+1]=")"
+                C.L[#C.L].nd=nil;;;
+    
+    --operator main parce function
+    @op=C,o,w=>
         o=o:match"(.-)=" --for this we need only the first part of operator
         @t=type(C.O[o])
         @r=C.R
@@ -351,11 +372,13 @@ F.C={C=>
             \|t=C.O[o](C,o,w,-1); --function direct call (if i < 0)
             o=t;
         r[#r+1]="="--insert equality 
-        for i=C.L[#C.L].st,#r-1 do --copy variable from the start of an object
-        ;
-            
-    for i=1,#k do C.O[Ck[i] ]=f end --initialise all
-    ;
+        for i=C.L[#C.L].st,#r-1 do r[#r+1]=r[i]end --copy variable from the start of an object
+        r[#r+1]=o 
+        r[#r+1]="("
+        C.L[#C.L].nd=1; --set end breaket require!
+                               
+    -- main function initialiser        
+    for i=1,#C.EQ do C.O[C.EQ[i] ]=op end;--END OF F.C
 }
 
 F.B={
