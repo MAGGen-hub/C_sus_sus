@@ -115,10 +115,10 @@ L=function(x,name,mode,env)
             --COMPILE -- o: operator, w: word
             cnt=1
             l=#x+1
+            C.ml=l
             for o,w,i in x:gmatch"([%s!#-&(-/:-@\\-^{-~`]*%[?=*[%['\"]?%s*)([%w_]*[^%w%p%s]*[^\n%S]*)()"do
                                         -- see that pattern? Now try to spell it in one breath! =P
                                         -- in this pattern the word (w) will never be "^%s*$"!
-                C.i=i
                 cnt=cnt+1 -- this cycle counter used to debug and optimise C SuS SuS parcer
                 --LINE COUNTER
                 o:gsub("\n",function()C.l=C.l+1 end)
@@ -130,7 +130,7 @@ L=function(x,name,mode,env)
                         t=t..o:sub(0,b) --finish string
                         if c then c=C.c
                         else 
-                            for k,v in pairs(S)do t=v(C,t)or t end --string and word parcers
+                            for k,v in pairs(S)do t=v(C,t,i)or t end --string and word parcers
                             C.pv=#R+1 --save index of previous value
                             c=R
                         end
@@ -169,7 +169,7 @@ L=function(x,name,mode,env)
                                         R[#R+1]=" "..a.." "
                                         o=o:sub(i+1)
                                     else
-                                        a,b=a(C,o,w) --if there is a special replacement function
+                                        a,b=a(C,o,w,i) --if there is a special replacement function
                                         o,w=a or o:sub(i+1),b or w
                                     end
                                     --C.pv=#R
@@ -185,7 +185,7 @@ L=function(x,name,mode,env)
                         end
                         --WORD
                         if #w>0 then
-                            for k,v in pairs(S)do w=v(C,w)or w end --word and string parcers
+                            for k,v in pairs(S)do w=v(C,w,i)or w end --word and string parcers
                             R[#R+1]=w --insert word
                             C.pv=#R --save index of previous value
                         end
@@ -237,7 +237,6 @@ F.b={C->--return function that will be inserted in special extensions table
         @a,b,c,r,t=w:match"^0([bo])(%d*)([eE]?.*)" --RUSH EEEEEEEEEEEEE for exponenta
         /|C.b&&C.R[C.pv]=="."?t,b,c=C.b,w:match"(%d+)([eE]?.*)"--b located! posible floating point!
         \|C.b=nil;
-        -- 8 line
         /|b?--number exist
           t,r=t||(a>"b"&&"8"||"2"),0 --You are a good person if you read this (^_^)
           for i,k in b:gmatch"()(.)"do
@@ -246,11 +245,12 @@ F.b={C->--return function that will be inserted in special extensions table
                                    end
           r=C.b&&tostring(r/t^#b):sub(3)||r --this is a floating point! recalculate required!
           C.b=!C.b&&#c<1&&t||nil--floating point support
-          $r..c;;;}-- 17 line
+          $r..c;;;}
 
 -- leveling function initialiser (breakets counter)
-F.l={C=> /|C.O["("]?$; --if C.O["("] exist - leveling system already initialized, skip proccess (line 22)
-    C.L={{},b={{},[0]={}},a={{},[0]={}}}-- 1 - open; 0 - close
+F.l={C=> 
+    /|C.O["("]?$; --if C.O["("] exist - leveling system already initialized, skip proccess (line 22)
+    C.L={{},b={{},[0]={}},a={{},[0]={}}}-- 1 - open "({["; 0 - close "]})"
     @l=C.L
     @p="([{}])"
     for k in p:gfind"(.)"do
@@ -263,8 +263,7 @@ F.l={C=> /|C.O["("]?$; --if C.O["("] exist - leveling system already initialized
             C.R[#C.R+1]=o
             l[#l+t]=t>0&&{}||nil
             for k,v in pairs(a)do v(C,w)end;
-                        end;}
-                                        -- This code is hard to understand because
+                        end;}           -- This code is hard to understand because
                                         -- it was sponsored by Peppino Spagetti from Pizza Tower PC game
 
 --start searcher initialiser
@@ -274,9 +273,8 @@ F.s={C=>
     @l=C.L
     @r=C.R
     /|l[1].st?$; -- Searcher was inited before! Skip!
-    l.b[1][#l.b[1]+1]=C=> --on level open
-        /|Kt[r[C.pv]:match"%w*"]||!r[C.pv]:find"[%w_%}%]%)'\"]"?l[#l].st=#r+1;; --previous value is not a word or string or breaket
-    l.a[1][#l.a[1]+1]=C,o,w=>l[#l].st=#r+1; --after level open
+    l.b[1][#l.b[1]+1]=C=>/|Kt[r[C.pv]:match"%w*"]||!r[C.pv]:find"[%w_%}%]%)'\"]"?l[#l].st=#r+1;; --on level open
+    l.a[1][#l.a[1]+1]=C=>l[#l].st=#r+1; --after level open
     
     l[1].st=1--first start of object is start of file (it must be set to avoid errors)
     C.S.st=C,w,i=> -- Cow says "MOOO"; F.s says "start of object is here *table index*"
@@ -304,9 +302,9 @@ F.N={C=>
     F.s[1](C)--load start searcher!
     @p=C.O["?"]--if E feature was enabled
     @r=C.R
-    @f=C,b=>
-        /|r[C.pc]==r[C.pv]?table.insert(r,C.ci,",'"..r[C.pv].."'");--function to insert index if index have a call after it
-        C.pc,C.L.b[1].pc,C.S.str=nil;
+    @f=C,b=> /|r[C.pc]==r[C.pv]?table.insert(r,C.ci,",'"..r[C.pv].."'");--function to insert index if index have a call after it
+             C.pc,C.L.b[1].pc,C.S.str=nil;
+    
     @e="Attempt to perform '"
     C.O["?"]=C,o,w=>
         @a=o:match'.([.:%[%({"]?)'
@@ -323,10 +321,6 @@ F.N={C=>
                 C.L.b[1].pc=f; --Call required! Insert an 'index'!
         \|r[#r+1]=p&&" "..p.." "||"?";;;}--if a was nil or not [.:] return if then else shortcut (if it not enabled -> let lua parce '?' as an error)
 
-
-
--- Ariphmetic end searcher needed
-
 --Add initialiser function to F.K feature to enable support of &&= and ||= 
 F.K[1]=C=>C.EQ={"&&","||",unpack(C.EQ||{})};
 
@@ -336,43 +330,43 @@ F.C={C=>
     
     --EQ - table with operators that support *op*= behaviour
     C.EQ={"+","-","*","%","/","..",unpack(C.EQ||{})}--unpack here for functions that added something into C.EQ before
-    --override leveling function ends
-    @f=C.O[")"]
     --binary keyword operators
     @k={["and"]=1,["or"]=2}
-    
+    @pk={["not"]=3,["and"]=2,["or"]=3}
     @l=C.L
     @r=C.R
-    l.b[0][#l.b[0]+1]=C=>/|l[#l].nd?r[#r+1]=")";;
-    l.a[0][#l.a[0]+1]=C=>
-        /|l[#l].nd&&(o:find".[%s\0]*[,;}]"||(o:find"^[%s\0]*$"&&!k[w:match"%S*"]))?
+    @e="Function constructors are incomparable with X= operators! Wrap function with \"()\" to use it with X=. example: var += (function() *your code* end)"
+    l.b[0][#l.b[0]+1]=C=>/|l[#l].nd?r[#r+1]=")";;--on level close
+    l.a[0][#l.a[0]+1]=C,o,w=>--after level close
+        /|l[#l].nd&&(o:find".[%s\0]*[,;}]"||(o:find"^[%s\0]*$"&&!k[w:match"%w*"]))?
             r[#r+1]=")"
-            l[#l].nd=nil;;--end required for this level and (next operator equal to ",;}" or empty and word is not equal to "and" or "or")
-    
-    -- normal end searcher
-    @es=C,o,w=>
-        /|l[#l].nd?
+            l[#l].nd=nil;;--end required for this level and (next operator equal to ",;}" or (operator is empty and word is not equal to "and" or "or"))
+            
+    C.S.es=C,w,i=>
+        /|l[#l].nd?-- sequence need ")" at end?
             @p=r[C.pv]
-            /|o:find"^[%s\0]*$"&&(p:find"[%w_]"||p:find"^['\"%[][%]'\"]$")&&!k[w:match"%S*"]?
+            print(p,w)
+            /|(p:find"^ ?[%w_'\"]"||p:find"^%[.-%]")&&!pk[p:match"^%w*"]&&!k[w:match"^%w*"]?--previous was a word or string and current word is not a "and" or "or"
                 r[#r+1]=")"
                 l[#l].nd=nil;;;
     
     --operator main parce function
     @op=C,o,w=>
         o=o:match"(.-)=" --for this we need only the first part of operator
-        @t=type(C.O[o])
+        @t=#type(C.O[o])
         /|t>3? --Type is not nil! Parce required! C SuS SuS operator!
             /|t<7?t=" "..C.O[o].." " --string
             \|t=C.O[o](C,o,w,-1); --function direct call (if i < 0)
             o=t;
         r[#r+1]="="--insert equality 
         for i=C.L[#C.L].st,#r-1 do r[#r+1]=r[i]end --copy variable from the start of an object
-        r[#r+1]=o 
-        r[#r+1]="("
+        --print("o",o)
+        r[#r+1]=o --add operator
+        r[#r+1]="(" --add opening breaket (this breaket will not conunt as level, because it C SuS SuS generated)
         l[#l].nd=1; --set end breaket require!
                                
     -- main function initialiser        
-    for i=1,#C.EQ do C.O[C.EQ[i] ]=op end;--END OF F.C
+    for i=1,#C.EQ do C.O[C.EQ[i].."=" ]=op end;--END OF F.C
 }
 
 F.B={
