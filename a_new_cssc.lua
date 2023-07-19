@@ -285,8 +285,6 @@ F.s={C=>
         /|p:match"^[.:]"?$;--exit
         --if current value is a string
         /|w:find"^[%['\"].*[%]'\"]"&&p:find"[%w_%]%)}'\"]"?$;--previous value was a breaket or word (func"" "shortcut call") or string (func()""[]{}"" multy shortcall) (operators skip)
-        --if current value is a word and previous value is a word or string
-        --/|w:find"[%w_]"&&(p:find"[%w_'\"]"||p:find"^%[.*%]")?$;
         --start of object found
         l[#l].st=#r+1;;} --set word as start
 
