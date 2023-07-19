@@ -176,7 +176,7 @@ L=function(x,name,mode,env)
                                     break -- operator found! break out...
                                 elseif i<2 then --operator was not found
                                     a=o:sub(1,1)
-                                    if a=="\0"then R[#R]=R[#R]..(table.remove(C.c,1)or"")
+                                    if a=="\0"then R[#R]=R[#R].." "..(table.remove(C.c,1)or"") --small space to keep things sepparate
                                     else R[#R+1]=#a>0 and a~='"'and a or nil end -- \0 - comment operator " -- string mark (always at end of seq)
                                     o=o:sub(2)
                                 end
@@ -284,7 +284,7 @@ F.s={C=>
         --check previous value for opts that continue the object " . : " 
         /|p:match"^[.:]"?$;--exit
         --if current value is a string
-        /|w:find"^[%['\"].*[%]'\"]"&&p:find"[%w_%]%)}'\"]"?$;--previous value was a breaket or word (func"" "shortcut call") or string (func()""[]{}"" multy shortcall) (operators skip)
+        /|w:find"^[%['\"].-[%]'\"]"&&p:find"[%w_%]%)}'\"]"?$;--previous value was a breaket or word (func"" "shortcut call") or string (func()""[]{}"" multy shortcall) (operators skip)
         --start of object found
         l[#l].st=#r+1;;} --set word as start
 
@@ -309,20 +309,17 @@ F.N={C=>
         C.pc,C.L.b[1].pc,C.S.str=nil;
     @e="Attempt to perform '"
     C.O["?"]=C,o,w=>
-        @a=o:match".(.)"
-        @b=a && a:match'[.:%[%({"]'
-        /|!r[C.pv]:find"[%w_%]%)}\"']%s*$"?err(C,e.."?"..(a||"").."' on '"..(r[C.pv]or"nil").."'");--if previous value was an operator
-        /|b?
+        @a=o:match'.([.:%[%({"]?)'
+        /|!r[C.pv]:find"^ ?[%w_%]%)}\"']%s-"?err(C,e.."?"..(a||"").."' on '"..(r[C.pv]:match"^ ?%S*"or"nil").."'");--if previous value was an operator
+        /|a?
             /|a:find"[.:]"&&!o:sub(3):find"^[\0%s]*$"?err(C,e..o:sub(3).."' on '?"..a.."'");--error if ?[.:] has operators but not word after it 
             table.insert(r,C.L[#C.L].st," cssc.nilF(") --Insert a breaket at the start of object!
-            r[#r+1]=b==":"&&",'"..w.."')"||")"--Call required! Insert an 'index'!
-            /|b=="."?
-                -- Index detected, and call check required!
+            r[#r+1]=a==":"&&",'"..w.."')"||")"--Call required! Insert an 'index'!
+            /|a=="."?-- Index detected, and call check required!
                 C.ci=#r--save index of cell (call_index) to insert if it needed
                 C.pc=#r+2--save index of word (posible_call)
-                C.S.str=C,w=>
-                    /|w:find"^[%w_]"?$;
-                    f(C);--for string shortcalls
+                C.S.str=C,w=>    /|w:find"^[%w_]"?$;
+                                 f(C);--for string shortcalls
                 C.L.b[1].pc=f; --Call required! Insert an 'index'!
         \|r[#r+1]=p&&" "..p.." "||"?";;;}--if a was nil or not [.:] return if then else shortcut (if it not enabled -> let lua parce '?' as an error)
 
