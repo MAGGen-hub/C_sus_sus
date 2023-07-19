@@ -303,9 +303,13 @@ end
 F.N={C=>
     F.s[1](C)--load start searcher!
     @p=C.O["?"]--if E feature was enabled
+    @r=C.R
+    @f=C,b=>
+        /|r[C.pc]==r[C.pv]?table.insert(r,C.ci,",'"..r[C.pv].."'");--function to insert index if index have a call after it
+        C.pc,C.L.b[1].pc,C.S.str=nil;
     @e="Attempt to perform '"
     C.O["?"]=C,o,w=>
-        @a,r=o:match".(.)",C.R
+        @a=o:match".(.)"
         @b=a && a:match'[.:%[%({"]'
         /|!r[C.pv]:find"[%w_%]%)}\"']%s*$"?err(C,e.."?"..(a||"").."' on '"..(r[C.pv]or"nil").."'");--if previous value was an operator
         /|b?
@@ -315,11 +319,12 @@ F.N={C=>
             /|b=="."?
                 -- Index detected, and call check required!
                 C.ci=#r--save index of cell (call_index) to insert if it needed
-                a,o=o:gsub("\0",1)
+                a,o=o:gsub("\0",1)--comments ma affect index so they need to be counted!
                 C.pc=#r+o+2--save index of word (posible_call)
-                C.L.b[1].pc=C=> 
-                    /|r[C.pc]==r[C.pv]?table.insert(C.R,C.ci,",'"..C.R[C.pv].."'"); --Call required! Insert an 'index'!
-                    C.pc=nil C.L.b[1].pc=nil;; --remove function from leveling calls
+                C.S.str=C,w=>
+                    /|w:find"^[%w_]"?$;
+                    f(C);--for string shortcalls
+                C.L.b[1].pc=f; --Call required! Insert an 'index'!
         \|r[#r+1]=p&&" "..p.." "||"?";;;}--if a was nil or not [.:] return if then else shortcut (if it not enabled -> let lua parce '?' as an error)
 
 

@@ -26,6 +26,11 @@ t={
     local p = b?"B equal nil, this will not be printed"?"and this too"?("and this",1)?.ind("and this")?"and this"?[[again]]
     print("p is nil:",p)
 ]==]},
+{"N feature test N\xB02",[==[<N,dbg(p)>
+    --indexing test
+    print(("This will work: %s")?:format"yes")
+    p?.pp""
+]==]}
 }
 name,code = unpack(t[i])
 
