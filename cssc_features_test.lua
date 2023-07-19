@@ -21,7 +21,7 @@ t={
     --short call
     a?"But this will work again"
     
-    --MULTY shortcall
+    --MULTY (short/full/index)call
     local b = nil --can be false
     local p = b?"B equal nil, this will not be printed"?"and this too"?("and this",1)?.ind("and this")?"and this"?[[again]]
     print("p is nil:",p)

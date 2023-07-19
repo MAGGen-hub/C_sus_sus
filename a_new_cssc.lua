@@ -176,8 +176,8 @@ L=function(x,name,mode,env)
                                     break -- operator found! break out...
                                 elseif i<2 then --operator was not found
                                     a=o:sub(1,1)
-                                    --C.pv=a=="\0"and C.pv or #R+1
-                                    R[#R+1]=#o>0 and(a=="\0"and (table.remove(C.c,1)or"")or a~='"'and a)or nil -- \0 - comment operator " -- string mark (always at end of seq)
+                                    if a=="\0"then R[#R]=R[#R]..(table.remove(C.c,1)or"")
+                                    else R[#R+1]=#a>0 and a~='"'and a or nil end -- \0 - comment operator " -- string mark (always at end of seq)
                                     o=o:sub(2)
                                 end
                             end
@@ -319,8 +319,7 @@ F.N={C=>
             /|b=="."?
                 -- Index detected, and call check required!
                 C.ci=#r--save index of cell (call_index) to insert if it needed
-                a,o=o:gsub("\0",1)--comments ma affect index so they need to be counted!
-                C.pc=#r+o+2--save index of word (posible_call)
+                C.pc=#r+2--save index of word (posible_call)
                 C.S.str=C,w=>
                     /|w:find"^[%w_]"?$;
                     f(C);--for string shortcalls
