@@ -26,7 +26,7 @@
 
 --CODE START
 --this section contain all lua keywords for specific features
-K={"if","then","elseif","else","local","return","or","and","not","end","function","for","while","in","do","repeat","until","break","nil","true","false"}
+K={}("if then elseif else local return or and not end function for while in do repeat until break nil true false "):gsub("%S+ ",function(x)K[#K+1]=" "..x end)
 --initialize lambda function feature
 l=function(C,o) --DO NOT PLACE LAMBDA AT THE START OF FILE!!! You will got ")" instead of "function(*args*)"
     i=#C.R
@@ -37,7 +37,7 @@ l=function(C,o) --DO NOT PLACE LAMBDA AT THE START OF FILE!!! You will got ")" i
         i,a=i-1,not a
         e=C.R[i] end
     table.insert(C.R,#p<1 and i or i+1,K[11]..p)-- K[11] - function keyword K[6] - return
-    C.R[#C.R+1]=(#p>0 and")"or"")..(o:sub(1,1)=="-"and K[6].." "or"") --WARNING!!! Thanks for your attention! =)
+    C.R[#C.R+1]=(#p>0 and")"or"")..(o:sub(1,1)=="-"and K[6]or"") --WARNING!!! Thanks for your attention! =)
 end
 
 --FEATURES TABLE
@@ -47,26 +47,25 @@ F={
 --if else then shortcut section
 E={ ["/|"]=K[1],--[[if]] ["?"]=K[2],--then
     [":|"]=K[3],--elseif
-    ["|"]="   ",--empty symbol to make code a little bit F# looking (only to make it look more understandable in unminified version (removed in release!))
     ["\\|"]=K[4]},--else
 
 -- keywords section
 K={ ["@"]=K[5],--local
     ["$"]=K[6],--return
-    ["||"]="or",
+    ["||"]=K[7],
     ["&&"]=K[8],--and
     ["!"]=K[9],--not
-    [";"]=function(C,o) -- any ";" that stand near ";,)]" or "\n" will be replaced by " end " for ex ";;" equal to " end  end "
-              e,a,p=" end ",o:match"(;*) *([\n%S]?)"
-              C.R[#C.R+1]=(#p>0 or#a>1)and e:rep(#a)or";"
+    [";"]=function(C,o,w) -- any ";" that stand near ";,)]" or "\n" will be replaced by " end " for ex ";;" equal to " end  end "
+              e,a,p,k=" end ",o:match"(;*) *([%S\n]?)%s*([%(\"]?)"
+              C.R[#C.R+1]=(#p>0 and (#k<1 or p~="\n") or#a>1)and e:rep(#a)or";"
               return o:sub(#a+1)
           end},
 
 --lambda section
-F={ ["..."]="...", -- You may ask why this token is here, but if you remove it and use ... in lambda you code will crush. So don't remove it please...
+F={ 
     ["->"]=l,
     ["=>"]=l},
-    
+  
 --debug (will be moved to C SuS SuS loaded part soon)
 dbg={function(C,V)
         C.F[V]=function(C,k)
@@ -86,7 +85,7 @@ L=function(x,name,mode,env)
         if c then --control string exists!
         
             --INITIALISE LOCALS
-            local R,S,O,po,C,s,t,a,b,l={""},{},{},""
+            local po,R,S,O,C,s,t,a,b,l="",{""},{},{['"']="",["\0"]="\n"} -- " - for strings \0 - for comments
             x=x:sub(#c+1) --remove control string to start parsing
             C={O=O,S=S,R=R,F={},c={},l=1,pv=1} -- initialise control tablet for special functions calls
                 -- Control table specification
@@ -101,11 +100,11 @@ L=function(x,name,mode,env)
                 
             
             --INITIALIZE COMPILLER
-            for K,V in c:gmatch"([%w_]+)%(?([%w_. ]*)"do--load flags that used in control string: K - feature name V - feature argument
-                if F[K]then -- feature exist
-                    for k,v in pairs(F[K])do O[k]=v end
-                    S[K]=F[K][1] and F[K][1](C,V,x,name,mode,env)-- [1] index is used to store special compiller directives
-                end                                              -- if special has argumet V ex: "<pre(V)>" then F["pre"][1](ctrl_table,"V")
+            for K,V in ("D"..c):gmatch"([%w_]+)%(?([%w_. ]*)"do--load flags that used in control string: K - feature name V - feature argument
+                if F[K]then -- feature exist                   -- D here is for default beaviour that expected from C SuS SuS
+                    for k,v in pairs(F[K])do O[k]=v end        -- D is not initialised at the start to make commpiller smaller
+                    l=F[K][1]and F[K][1](C,V,x,name,mode,env)-- [1] index is used to store special compiller directives
+                end                                          -- if special has argumet V ex: "<pre(V)>" then F["pre"][1](ctrl_table,"V")
             end
             O[1]=nil -- remove trash from current_operators table (all specials in S table now)
             
@@ -163,25 +162,22 @@ L=function(x,name,mode,env)
                             R[#R]=R[#R]..a
                             o=o:sub(#a+1)
                             for i=3,1,-1 do --WARNING! Max operator length: 3    
-                                a=O[o:match((".?"):rep(i))] -- a variable here used to store enabled_operators[posible operator]
+                                a=o:sub(1,i)  -- a variable here used to store enabled_operators[posible operator]
+                                a=O[a] or i<2 and a
                                 if a then --if O[posible_operator] -> C SuS SuS enabled operator (or something else) found and must be parced
                                     if 7>#type(a)then --type<7 -> string; >7 - function | these can't be any othere values
-                                        R[#R+1]=" "..a.." "
+                                        R[#R+1]=a --string located 
                                         o=o:sub(i+1)
                                     else
-                                        a,b=a(C,o,w,i) --if there is a special replacement function
-                                        o,w=a or o:sub(i+1),b or w
+                                        b={a(C,o,w,i)} --if there is a special replacement function
+                                        o,w=b[1]or o:sub(i+1),b[2]or w
+                                        a=" "
                                     end
-                                    --C.pv=#R
                                     break -- operator found! break out...
-                                elseif i<2 then --operator was not found
-                                    a=o:sub(1,1)
-                                    if a=="\0"then R[#R]=R[#R].." "..(table.remove(C.c,1)or"") --small space to keep things sepparate
-                                    else R[#R+1]=#a>0 and a~='"'and a or nil end -- \0 - comment operator " -- string mark (always at end of seq)
-                                    o=o:sub(2)
                                 end
                             end
-                            C.pv=a=="\0"and C.pv or #R
+                            --at this point a will be equal to located operator so:
+                            C.pv=(a=="\0"or #a<1)and C.pv or #R --save last value index (comments keept unsaved)
                         end
                         --WORD
                         if #w>0 then
@@ -206,20 +202,22 @@ L=function(x,name,mode,env)
     end
     return NL(x,name,mode,env)
 end
---load other features of compiler using compiler it self (can be used as example of C SuS SuS programming)
+
+--COMPILLER EXTENSIONS:load other features of compiler using compiler ITSELF (can be used as example of C SuS SuS programming)
 a,b=L([[<E,K,F,dbg>
-
 --local keyword access table
-@Kt={}
-for i=1,21 do Kt[K[i] ]=1 end
+@Kt={} for i=1,21 do Kt[K[i] ]=1 end
 
+--Default feature that allways enabled: comment parcing, lua operators with length>2, other stuff
+F.D={["\0"]=C=>@r=C.R r[#r]=r[#r].." "..(table.remove(C.c,1)||"");}
+("..><~="):gsub("(.)()",(x,i)=>x=i>3&&x.."="||x:rep(i)F.D[x]=x;)
 
 --Error detector
-err=C,s=>C.err=C.err or "SuS["..C.l.."]:"..s;
+err=C,s=>C.err=C.err||"SuS["..C.l.."]:"..s;
 
 F.err={C=>
     C.F.err=C=>
-        /|C.err?$ nil,C.err;;;}
+        /|C.err?$ nil,control_table.err;;;}
 
 --Debug feature
 F.dbg={C,V=> -- V - argument
@@ -229,7 +227,7 @@ F.dbg={C,V=> -- V - argument
         :|v=="p"?print(table.concat(C.R));
         /|m=="c"?$R
         :|m=="s"?$table.concat(C.R);;;}
-    
+
 --0b0000000 and 0o0000.000 number format support (avaliable exponenta: E+-x)
 F.b={C->--return function that will be inserted in special extensions table
     C,w=>
@@ -246,7 +244,7 @@ F.b={C->--return function that will be inserted in special extensions table
           r=C.b&&tostring(r/t^#b):sub(3)||r --this is a floating point! recalculate required!
           C.b=!C.b&&#c<1&&t||nil--floating point support
           $r..c;;;}
-
+         
 -- leveling function initialiser (breakets counter)
 F.l={C=> 
     /|C.O["("]?$; --if C.O["("] exist - leveling system already initialized, skip proccess (line 22)
@@ -273,7 +271,7 @@ F.s={C=>
     @l=C.L
     @r=C.R
     /|l[1].st?$; -- Searcher was inited before! Skip!
-    l.b[1][#l.b[1]+1]=C=>/|Kt[r[C.pv]:match"%w*"]||!r[C.pv]:find"[%w_%}%]%)'\"]"?l[#l].st=#r+1;; --on level open
+    l.b[1][#l.b[1]+1]=C=>/|Kt[r[C.pv]:match"%w*"]||!r[C.pv]:find"[%w_%}%]%)\"']"?l[#l].st=#r+1;; --on level open
     l.a[1][#l.a[1]+1]=C=>l[#l].st=#r+1; --after level open
     
     l[1].st=1--first start of object is start of file (it must be set to avoid errors)
@@ -282,7 +280,8 @@ F.s={C=>
         --check previous value for opts that continue the object " . : " 
         /|p:match"^[.:]"?$;--exit
         --if current value is a string
-        /|w:find"^[%['\"].-[%]'\"]"&&p:find"[%w_%]%)}'\"]"?$;--previous value was a breaket or word (func"" "shortcut call") or string (func()""[]{}"" multy shortcall) (operators skip)
+        /|w:find"^[%['\"].-[%]'\"]"&&p:find"[%w_%]%)}\"']"?$;--previous value was a breaket or word (func"" "shortcut call") or string (func()""[]{}"" multy shortcall) (operators skip)
+        --print("a")
         --start of object found
         l[#l].st=#r+1;;} --set word as start
 
