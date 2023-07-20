@@ -309,7 +309,7 @@ F.N={C=>
     C.O["?"]=C,o,w=>
         @a=o:match'.([.:%[%({"]?)'
         /|!r[C.pv]:find"^ ?[%w_%]%)}\"']%s-"?err(C,e.."?"..(a||"").."' on '"..(r[C.pv]:match"^ ?%S*"or"nil").."'");--if previous value was an operator
-        /|a?
+        /|#a>0?
             /|a:find"[.:]"&&!o:sub(3):find"^[\0%s]*$"?err(C,e..o:sub(3).."' on '?"..a.."'");--error if ?[.:] has operators but not word after it 
             table.insert(r,C.L[#C.L].st," cssc.nilF(") --Insert a breaket at the start of object!
             r[#r+1]=a==":"&&",'"..w.."')"||")"--Call required! Insert an 'index'!
@@ -335,35 +335,13 @@ F.C={C=>
     @pk={["not"]=3,["and"]=2,["or"]=3}
     @l=C.L
     @r=C.R
-    @e="Function constructors are incomparable with X= operators! Wrap function with \"()\" to use it with X=. example: var += (function() *your code* end)"
-    l.b[0][#l.b[0]+1]=C=>/|l[#l].nd?r[#r+1]=")";;--on level close
-    l.a[0][#l.a[0]+1]=C,o,w=>--after level close
-        /|l[#l].nd&&(o:find".[%s\0]*[,;}]"||(o:find"^[%s\0]*$"&&!k[w:match"%w*"]))?
-            r[#r+1]=")"
-            l[#l].nd=nil;;--end required for this level and (next operator equal to ",;}" or (operator is empty and word is not equal to "and" or "or"))
-            
-    C.S.es=C,w,i=>
-        /|l[#l].nd?-- sequence need ")" at end?
-            @p=r[C.pv]
-            print(p,w)
-            /|(p:find"^ ?[%w_'\"]"||p:find"^%[.-%]")&&!pk[p:match"^%w*"]&&!k[w:match"^%w*"]?--previous was a word or string and current word is not a "and" or "or"
-                r[#r+1]=")"
-                l[#l].nd=nil;;;
-    
     --operator main parce function
     @op=C,o,w=>
         o=o:match"(.-)=" --for this we need only the first part of operator
-        @t=#type(C.O[o])
-        /|t>3? --Type is not nil! Parce required! C SuS SuS operator!
-            /|t<7?t=" "..C.O[o].." " --string
-            \|t=C.O[o](C,o,w,-1); --function direct call (if i < 0)
-            o=t;
+        /|#type(C.O[o])==6?o=" "..C.O[o].." ";
         r[#r+1]="="--insert equality 
-        for i=C.L[#C.L].st,#r-1 do r[#r+1]=r[i]end --copy variable from the start of an object
-        --print("o",o)
-        r[#r+1]=o --add operator
-        r[#r+1]="(" --add opening breaket (this breaket will not conunt as level, because it C SuS SuS generated)
-        l[#l].nd=1; --set end breaket require!
+        for i=l[#l].st,#r-1 do r[#r+1]=r[i]end --copy variable from the start of an object
+        r[#r+1]=o; --add operator 
                                
     -- main function initialiser        
     for i=1,#C.EQ do C.O[C.EQ[i].."=" ]=op end;--END OF F.C
