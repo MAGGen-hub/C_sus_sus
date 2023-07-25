@@ -26,7 +26,9 @@
 
 --CODE START
 --this section contain all lua keywords for specific features
-K={}("if then elseif else local return or and not end function for while in do repeat until break nil true false "):gsub("%S+ ",function(x)K[#K+1]=" "..x end)
+K={}
+Ks="if then elseif else local return or and not end function for while in do repeat until break nil true false "
+Ks:gsub("%S+ ",function(x)K[#K+1]=" "..x end)
 --initialize lambda function feature
 local l=function(C,o) --DO NOT PLACE LAMBDA AT THE START OF FILE!!! You will got ")" instead of "function(*args*)"
     i=#C.R
@@ -120,8 +122,8 @@ L=function(x,name,mode,env)
                 o:gsub("\n",function()C.l=C.l+1 end)
                 --STRING MODE: string or comment located and must be captured
                 if s then
-                    a,b,e=o:find(#s<2 and"(\\*)[\n"..s.."]%s*"or"%]=*%]%s*") --locate posible end of string (depends on string type)
-                    if a and(#s<2 and(s=="\n"or#e%2<1)or #s==b-a+1)or i==l then -- end of something found, check is it our string end or not
+                    a,b,e=o:find(#s<2 and"(\\*[\n"..s.."])%s*"or"(%]=*%])%s*") --locate posible end of string (depends on string type)
+                    if a and(#s<2 and(s=="\n"or#e%2>0)or#s==#e)or i==l then -- end of something found, check is it our string end or not
                         b=b or i
                         t=t..o:sub(0,b) --finish string
                         if c then c=C.c
@@ -344,7 +346,76 @@ F.C={C=>
     for i=1,#C.EQ do C.O[C.EQ[i].."=" ]=op end;--END OF F.C
 }
 
---Bitwize
+
+--operator priority searcher (seaches for last priority sequence) Lua5.3 version
+@op={U='. : ? ( { [ ] } ) ',--unic ops that has no priority
+R=' = , ; '..Ks:gsub("%w+",{['and']='',['or']='',['not']='',['true']='',['false']='',['nil']=''}),--reset priority
+'or ',--1 the lowest prior
+'and ',
+'< > <= >= ~= == ',--
+'| ',
+'~ ',
+'& ',
+'<< >> ',
+'.. ',--8
+'+ - ',--9
+'* // % ',--10
+u='not # - ~ ',--11 is unary
+'^ '--12 the highest priority
+}
+
+F.p={C=>
+    F.s[1](C)
+    @l=C.L
+    @r=C.R
+    @f=C,o=>--function to find MAX cur priority
+        o=o:match"%S*".." " --exstract operator
+        /|o:find"^%s*$"||op.U:find(o,1,1)?$;--no priority affection -> skip
+        /|op.R:find(" "..o,1,1)?l[#l].p={l=0}$;-- reset priority table
+        l[#l].p=l[#l].p||{l=0}
+        @c=l[#l].p--if no table then create it!
+        @i,s=0
+        --UNARY CHECK
+        /|op.u:find(o)?
+            @p=r[#r]:match"%S*"
+            c.u=c.u&&c.u||(Kt[p]||p:find"[^%P%)%]}]")&&#r+1||nil --REDO! Add and or not support
+            $;
+        --BINARY CHECK
+        while !s&&i<11 do i=i+1 s=op[i]:find(o,1,1) end
+        /|s==nil?$;--last op priority is equal to current op priority
+        /|c.l~=i?
+            c[i]=c.u&&c.u||l[#l].st
+            c.u=!c.u&&c.u||nil;--is binary
+
+        /|i>c.l?
+            c.m=c[i];
+        c.l=i;
+
+    --setup priority function
+    C.S.O.pos=C,a,b=>
+        /|a=='"'||a=='\0'?$;--string\comment mark skip
+        /|type(b)==6?f(C,b);--return replacement
+        f(C,a);--return base
+    C.S.W.pos=C,w=>
+        /|w:find"^['\"%[]"?$;--if string then stop
+        f(C,w);
+    ;}
+
+--[===[
+@bt={shl='<<',shr='>>',bxor='~',bor='|',band='&'}    
+F.B={C=>
+    F.p[1](C)
+    @l=C.L
+    @r=C.R
+    for k,v in pairs(bt)do
+        C.O[v]=C,o,w=>
+            s=l[#l].p&&l[#l].p.m||l[#l].st
+            table.insert(r,s,"cssc.bit(")
+            r[#r+1]=",'"..k.."')..";
+                       end
+;}]===]
+
+-- REDO! PRIORITY SUPPORT REQUIRED!
 do
 bit32.shl=bit32.lshift --this shortcuts are required!
 bit32.shr=bit32.rshift
@@ -376,7 +447,8 @@ F.B={C=>
 for k,v in pairs{bnot=1,unpack(bt)}do --setup operators
     B[k]=setmetatable({{op=k,ghost=true}},{__type=t,__concat=f,__pow=f})
                                   end
-end
+end 
+
 ]],"SuS",nil,_ENV)--]=]
 b=b and error(b)
 a=a and a(...)
