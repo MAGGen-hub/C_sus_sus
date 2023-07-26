@@ -27,7 +27,7 @@
 --CODE START
 --this section contain all lua keywords for specific features
 K={}
-Ks="if then elseif else local return or and not end function for while in do repeat until break nil true false "
+Ks="if then elseif else local return end function for while in do repeat until break "
 Ks:gsub("%S+ ",function(x)K[#K+1]=" "..x end)
 --initialize lambda function feature
 local l=function(C,o) --DO NOT PLACE LAMBDA AT THE START OF FILE!!! You will got ")" instead of "function(*args*)"
@@ -38,7 +38,7 @@ local l=function(C,o) --DO NOT PLACE LAMBDA AT THE START OF FILE!!! You will got
     while i>0 and(#p>0 and(a and(e:match"[%w_]+"or"..."==e)or","==e)or#p<1 and not e:find"^%(%s*")do --comma or word or ( if ) located
         i,a=i-1,not a
         e=C.R[i] end
-    table.insert(C.R,#p<1 and i or i+1,K[11]..p)-- K[11] - function keyword K[6] - return
+    table.insert(C.R,#p<1 and i or i+1,K[8]..p)-- K[8] - function keyword K[6] - return
     C.R[#C.R+1]=(#p>0 and")"or"")..(o:sub(1,1)=="-"and K[6]or"") --WARNING!!! Thanks for your attention! =)
 end
 
@@ -52,9 +52,9 @@ K={ ["/|"]=K[1],--[[if]] ["?"]=K[2],--then
     ["\\|"]=K[4],--else
     ["@"]=K[5],--local
     ["$"]=K[6],--return
-    ["||"]=K[7],--or
-    ["&&"]=K[8],--and
-    ["!"]=K[9],--not
+    ["||"]=" or ",--or
+    ["&&"]=" and ",--and
+    ["!"]=" not ",--not
     [";"]=function(C,o,w) -- any ";" that stand near ";,)]" or "\n" will be replaced by " end " for ex ";;" equal to " end  end "
               e,a,p,k=" end ",o:match"(;*) *([%S\n]?)%s*([%(\"]?)"
               C.R[#C.R+1]=(#p>0 and (#k<1 or p~="\n") or#a>1)and e:rep(#a)or";"
@@ -84,7 +84,7 @@ L=function(x,name,mode,env)
         if c then --control string exists!
         
             --INITIALISE LOCALS
-            local po,R,S,O,C,s,t,a,b,l,e="",{""},{W={},O={}},{['"']="",["\0"]="\n"} -- " - for strings \0 - for comments
+            local po,R,S,O,C,s,t,a,b,l,e="",{""},{W={},O={}},{['"']="",["\0"]="\n",['..']='..',['...']='...'} -- " - for strings \0 - for comments
             x=x:sub(#c+1) --remove control string to start parsing
             C={O=O,S=S,R=R,F={},c={},l=1,pv=1} -- initialise control tablet for special functions calls
                 -- Control table specification
@@ -208,7 +208,7 @@ end
 --COMPILLER EXTENSIONS:load other features of compiler using compiler ITSELF (can be used as example of C SuS SuS programming)
 a,b=L([[<K,F,dbg>
 --local keyword access table
-@Kt={} for i=1,21 do Kt[K[i]:match"%S+" ]=1 end
+@Kt={} for i=1,#K do Kt[K[i]:match"%S+" ]=1 end
 
 --Default features: comment parcing
 F.D={["\0"]=C=>@r=C.R r[#r]=r[#r].." "..(table.remove(C.c,1)||"");,
@@ -279,7 +279,7 @@ F.s={C=>
     C.S.W.st=C,w,i=> -- Cow says "MOOO"; F.s says "start of object is here *table index*"
         @p=r[C.pv]
         --check previous value for opts that continue the object " . : " 
-        /|p:match"^[.:]"?$;--exit
+        /|p:match"^[.:]"&&!p:match"%.%."?$;--exit
         --if current value is a string
         /|w:find"^[%['\"].-[%]'\"]"&&p:find"[%w_%]%)}\"']"?$;--previous value was a breaket or word (func"" "shortcut call") or string (func()""[]{}"" multy shortcall) (operators skip)
         --start of object found
@@ -349,7 +349,7 @@ F.C={C=>
 
 --operator priority searcher (seaches for last priority sequence) Lua5.3 version
 @op={U='. : ? ( { [ ] } ) ',--unic ops that has no priority
-R=' = , ; '..Ks:gsub("%w+",{['and']='',['or']='',['not']='',['true']='',['false']='',['nil']=''}),--reset priority
+R=' = , ; '..Ks,--reset priority
 'or ',--1 the lowest prior
 'and ',
 '< > <= >= ~= == ',--
@@ -363,22 +363,24 @@ R=' = , ; '..Ks:gsub("%w+",{['and']='',['or']='',['not']='',['true']='',['false'
 u='not # - ~ ',--11 is unary
 '^ '--12 the highest priority
 }
-
+@pk={['and']=1,['or']=1,['not']=1}
 F.p={C=>
     F.s[1](C)
     @l=C.L
     @r=C.R
     @f=C,o=>--function to find MAX cur priority
-        o=o:match"%S*".." " --exstract operator
+        o=o:match"%S+" --exstract operator
+        /|!o?$;
+        o=o.." "
         /|o:find"^%s*$"||op.U:find(o,1,1)?$;--no priority affection -> skip
         /|op.R:find(" "..o,1,1)?l[#l].p={l=0}$;-- reset priority table
         l[#l].p=l[#l].p||{l=0}
         @c=l[#l].p--if no table then create it!
         @i,s=0
         --UNARY CHECK
-        /|op.u:find(o)?
+        /|op.u:find(o,1,1)?
             @p=r[#r]:match"%S*"
-            c.u=c.u&&c.u||(Kt[p]||p:find"[^%P%)%]}]")&&#r+1||nil --REDO! Add and or not support
+            c.u=c.u&&c.u||(Kt[p]||pk[p]||p:find"[^%P%)%]}]")&&#r+1||nil
             $;
         --BINARY CHECK
         while !s&&i<11 do i=i+1 s=op[i]:find(o,1,1) end
@@ -389,6 +391,8 @@ F.p={C=>
 
         /|i>c.l?
             c.m=c[i];
+        print("c.l",c.l)
+        c.i=c.l
         c.l=i;
 
     --setup priority function
@@ -401,21 +405,29 @@ F.p={C=>
         f(C,w);
     ;}
 
---[===[
-@bt={shl='<<',shr='>>',bxor='~',bor='|',band='&'}    
+@bt={shl='<<',shr='>>',bxor='~',bor='|',band='&',idiv='//'}    
 F.B={C=>
     F.p[1](C)
     @l=C.L
     @r=C.R
+    C.S.O.po=C,a,b=>
+        /|a:match"[.:%(%[%]%){}]"?$;
+        l[#l].po=l[#l].qo--po - previous operator
+        l[#l].qo=a;--qo - 'q'urrent operator
+    C.S.W.po=C,w=>/|Kt[w:match"%S+"]? l[#l].po,l[#l].qo=nil;;
     for k,v in pairs(bt)do
         C.O[v]=C,o,w=>
-            s=l[#l].p&&l[#l].p.m||l[#l].st
-            table.insert(r,s,"cssc.bit(")
+            print(l[#l].p.i,l[#l].p.l)
+            @s=l[#l].p&&(l[#l].p.i>8&&l[#l].p.m)||l[#l].st
+            @p=l[#l].po||""
+            @d=((p:find"([><])%1"||p:find"[~|&]")&&""||".st")
+            /|v=='~'&&(r[#r]:find"[^%)}%]%P]"||Kt[r[#r]:match"%S+"]||pk[r[#r]:match"%S+"])?r[#r+1]="cssc.bit.bnot^" l[#l].qo="bnot"$;
+            table.insert(r,s,"cssc.bit"..d.."(")
             r[#r+1]=",'"..k.."')..";
                        end
-;}]===]
+;}
 
--- REDO! PRIORITY SUPPORT REQUIRED!
+--[===[ REDO! PRIORITY SUPPORT REQUIRED!
 do
 bit32.shl=bit32.lshift --this shortcuts are required!
 bit32.shr=bit32.rshift
@@ -447,7 +459,7 @@ F.B={C=>
 for k,v in pairs{bnot=1,unpack(bt)}do --setup operators
     B[k]=setmetatable({{op=k,ghost=true}},{__type=t,__concat=f,__pow=f})
                                   end
-end 
+end ]===]
 
 ]],"SuS",nil,_ENV)--]=]
 b=b and error(b)
