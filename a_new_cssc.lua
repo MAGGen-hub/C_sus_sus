@@ -84,7 +84,7 @@ L=function(x,name,mode,env)
         if c then --control string exists!
         
             --INITIALISE LOCALS
-            local po,R,S,O,C,s,t,a,b,l,e="",{""},{W={},O={}},{['"']="",["\0"]="\n",['..']=' ..',['...']='...'} -- " - for strings \0 - for comments
+            local po,R,S,O,C,s,t,a,b,l,e="",{""},{W={},O={}},{['"']="",["\0"]="\n",['..']='..',['...']='...'} -- " - for strings \0 - for comments
             x=x:sub(#c+1) --remove control string to start parsing
             C={O=O,S=S,R=R,F={},c={},l=1,pv=1} -- initialise control tablet for special functions calls
                 -- Control table specification
@@ -157,13 +157,13 @@ L=function(x,name,mode,env)
                     if not c or i==l then
                         --OPERATOR PARCE: Default parcer and custom functions launcher
                         while #o>0 do
-                            a=o:match"^%s*" --this code was made to decrase the length of result table and allow spacing in operators capture section
-                            R[#R]=R[#R]..a
-                            o=o:sub(#a+1)
+                            --a=o:match"^%s*" --this code was made to decrase the length of result table and allow spacing in operators capture section
+                            --R[#R]=R[#R]..a
+                            --o=o:sub(#a+1)
                             for i=3,1,-1 do --WARNING! Max operator length: 3    
                                 a=o:sub(1,i)  -- a variable here used to store enabled_operators[posible operator]
                                 b=O[a] or i<2 and a
-                                if b and #o>0 then --if O[posible_operator] -> C SuS SuS enabled operator (or something else) found and must be parced
+                                if b  then --if O[posible_operator] -> C SuS SuS enabled operator (or something else) found and must be parced
                                     for k,v in pairs(S.O)do b=v(C,a,b)or b end -- for all located operators: Lua and C SuS SuS
                                     if 7>#type(b)then --type<7 -> string; >7 - function | these can't be any othere values
                                         R[#R+1]=b --string located
@@ -175,9 +175,9 @@ L=function(x,name,mode,env)
                                     break -- operator found! break out...
                                 end
                             end
-                            --a=o:match"^%s*"
-                            --R[#R]=R[#R]..a
-                            --o=o:sub(#a+1)
+                            a=o:match"^%s*"
+                            R[#R]=R[#R]..a
+                            o=o:sub(#a+1)
                             C.pv=(a=="\0"or b=="")and C.pv or #R --save last value index (comments keept unsaved) ""->empty result means no value!
                             
                         end
@@ -208,7 +208,7 @@ end
 --COMPILLER EXTENSIONS:load other features of compiler using compiler ITSELF (can be used as example of C SuS SuS programming)
 a,b=L([[<K,F,dbg>
 --local keyword access table
-@Kt={} for i=1,#K do Kt[K[i]:match"%S+" ]=i end
+@Kt={} for i=1,#K do Kt[K[i]:match"%S+" ]=1 end
 
 --Default features: comment parcing
 F.D={["\0"]=C=>@r=C.R r[#r]=r[#r].." "..(table.remove(C.c,1)||"");,
@@ -231,8 +231,8 @@ F.dbg={C,V=> -- V - argument
         :|m=="s"?$table.concat(C.R);;;}
 
 --0b0000000 and 0o0000.000 number format support (avaliable exponenta: E+-x)
-F.b={C=>--return function that will be inserted in special extensions table
-    C.S.W.b=C,w=>
+F.b={C->--return function that will be inserted in special extensions table
+    C,w=>
         print("bebra")
         @a,b,c,r,t=w:match"^0([bo])(%d*)([eE]?.*)" --RUSH EEEEEEEEEEEEE for exponenta
         /|C.b&&C.R[C.pv]=="."?t,b,c=C.b,w:match"(%d+)([eE]?.*)"--b located! posible floating point!
@@ -250,7 +250,7 @@ F.b={C=>--return function that will be inserted in special extensions table
 -- leveling function initialiser (breakets counter)
 F.l={C=> --TODO! ADD START OF LEVEL RECODER!!!
     /|C.O["("]?$; --if C.O["("] exist - leveling system already initialized, skip proccess (line 22)
-    C.L={{p={l=0}},b={{},[0]={}},a={{},[0]={}}}-- 1 - open "({["; 0 - close "]})"
+    C.L={{},b={{},[0]={}},a={{},[0]={}}}-- 1 - open "({["; 0 - close "]})"
     @l=C.L
     @p="([{}])"
     for k in p:gfind"(.)"do
@@ -346,17 +346,17 @@ F.C={C=>
     for i=1,#C.EQ do C.O[C.EQ[i].."=" ]=op end;--END OF F.C
 }
 
---[=====[DEPRECATED!
+
 --operator priority searcher (seaches for last priority sequence) Lua5.3 version
 @op={U='. : ? ( { [ ] } ) ',--unic ops that has no priority
-R=' = , ; '..Ks,--reset priority (all keywords exept and or not)
+R=' = , ; '..Ks,--reset priority
 'or ',--1 the lowest prior
-'and ',--2
-'< > <= >= ~= == ',--3
-'| ',--4
-'~ ',--5
-'& ',--6
-'<< >> ',--7
+'and ',
+'< > <= >= ~= == ',--
+'| ',
+'~ ',
+'& ',
+'<< >> ',
 '.. ',--8
 '+ - ',--9
 '* // % ',--10
@@ -377,23 +377,21 @@ F.p={C=>
         l[#l].p=l[#l].p||{l=0}
         @c=l[#l].p--if no table then create it!
         @i,s=0
-        print(o)
         --UNARY CHECK
         /|op.u:find(o,1,1)?
             @p=r[#r]:match"%S*"
-            /|Kt[p]||pk[p]||p:find"[^%P%)%]}]"?
-                c.u=c.u&&c.u||#r+1
-                $;;
+            c.u=c.u&&c.u||(Kt[p]||pk[p]||p:find"[^%P%)%]}]")&&#r+1||nil
+            $;
         --BINARY CHECK
         while !s&&i<11 do i=i+1 s=op[i]:find(o,1,1) end
-        c.pu=c.u -- save object unary operators if exist
         /|s==nil?$;--last op priority is equal to current op priority
         /|c.l~=i?
             c[i]=c.u&&c.u||l[#l].st
             c.u=!c.u&&c.u||nil;--is binary
+
         /|i>c.l?
             c.m=c[i];
-        /|i<4?c.bt=nil;--bitwize seq reset [this was created only for btw support!]
+        print("c.l",c.l)
         c.i=c.l
         c.l=i;
 
@@ -402,40 +400,30 @@ F.p={C=>
         /|a=='"'||a=='\0'?$;--string\comment mark skip
         /|type(b)==6?f(C,b);--return replacement
         f(C,a);--return base
-        
     C.S.W.pos=C,w=>
-        @p=w:match"%S+"
-        /|pk[p]||Kt[p]?f(C,w);;--equal to keyword
-    ;}]=====]
+        /|w:find"^['\"%[]"?$;--if string then stop
+        f(C,w);
+    ;}
 
-@bt={shl='<<',shr='>>',bxor='~',bor='|',band='&'}
-@kp={}
-('and or , = ; > < >= <= ~= == => ->'):gsub("%S+",(x)=>kp[x]=1;)
+@bt={shl='<<',shr='>>',bxor='~',bor='|',band='&',idiv='//'}    
 F.B={C=>
-    F.s[1](C)
+    F.p[1](C)
     @l=C.L
     @r=C.R
-    --function to correct priority of sequence (set on O and on W)
-    @f=C,o=>
-        o=o:match"%S+"--trim
-        /|Kt[o]||kp[o]?
-            l[#l].bst=#r+2 
-            l[#l].bt=nil;;--start of sequence
-    C.S.O.pc=C,a,b=>
-        /|type(b)==6?f(C,b)--replacement
-        \|f(C,a);;--base
-    C.S.W.pc=f 
+    C.S.O.po=C,a,b=>
+        /|a:match"[.:%(%[%]%){}]"?$;
+        l[#l].po=l[#l].qo--po - previous operator
+        l[#l].qo=a;--qo - 'q'urrent operator
+    C.S.W.po=C,w=>/|Kt[w:match"%S+"]? l[#l].po,l[#l].qo=nil;;
     for k,v in pairs(bt)do
         C.O[v]=C,o,w=>
-            @i=v=='//'
-            @d=(l[#l].bt)&&""||".st"
-            /|v=='~'&&(r[#r]:find"[^%)}%]%P]"||Kt[r[#r]:match"%S+"]||kp[r[#r]:match"%S+"])?r[#r+1]="cssc.mt.bnot^" $;--l[#l].qo="bnot"$;
-            /|l[#l].bt?r[l[#l].bt-1]=','
-            \|table.insert(r,l[#l].bst||l[#l].st,"cssc.mt(");
-            
-            r[#r+1]=",cssc.bit."..k
-            r[#r+1]=")"..(i&&'/'||'..')
-            l[#l].bt=#r+1;
+            print(l[#l].p.i,l[#l].p.l)
+            @s=l[#l].p&&(l[#l].p.i>8&&l[#l].p.m)||l[#l].st
+            @p=l[#l].po||""
+            @d=((p:find"([><])%1"||p:find"[~|&]")&&""||".st")
+            /|v=='~'&&(r[#r]:find"[^%)}%]%P]"||Kt[r[#r]:match"%S+"]||pk[r[#r]:match"%S+"])?r[#r+1]="cssc.bit.bnot^" l[#l].qo="bnot"$;
+            table.insert(r,s,"cssc.bit"..d.."(")
+            r[#r+1]=",'"..k.."')..";
                        end
 ;}
 
