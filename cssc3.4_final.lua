@@ -1,4 +1,4 @@
--- C SuS SuS Programming language compiler 3.4-alpha
+-- C SuS SuS Programming language compiler 3.0
 
 -- VARIABLE DOCUMENTATION
     --(variables already minified because it takes THE HECK OF A LOT time to find and replce them all after prog done)
@@ -61,7 +61,8 @@ K={ ["/|"]=K[1],--[[if]] ["?"]=K[2],--then
               return o:sub(#a+1)end},
 
 --lambda section
-F={ ["->"]=l,
+F={ ["..."]="...",
+    ["->"]=l,
     ["=>"]=l},
   
 --debug (will be moved to C SuS SuS loaded part in final version)
@@ -240,7 +241,7 @@ F.b={C=>--return function that will be inserted in special extensions table
           $r..c;;;}
          
 -- leveling function initialiser (breakets counter)
-F.l={C=>
+F.l={C=> --TODO! ADD START OF LEVEL RECODER!!!
     /|C.O["("]?$; --if C.O["("] exist - leveling system already initialized, skip proccess (line 22)
     C.L={{p={l=0}},b={{},[0]={}},a={{},[0]={}}}-- 1 - open "({["; 0 - close "]})"
     @l=C.L
@@ -288,8 +289,7 @@ N=(o,i)=>-- o -> object, i -> index
     /|i?$o[i]&&o||c; --> obj and index exist -> colon mode
     $o; -- obj exist but not index
 end
-
--- Not null check feature! Must be loaded after E for E support
+-- not null check feature! Must be loaded after E for E support
 F.N={C=>
     F.s[1](C)--load start searcher!
     @p=C.O["?"]--if E feature was enabled
@@ -316,13 +316,7 @@ F.N={C=>
 --Add initialiser function to F.K feature to enable support of &&= and ||= 
 F.K[1]=C=>C.EQ={"&&","||",unpack(C.EQ||{})};
 
--- X= operators feature
---WARNING! This feature has only partual support of C++ X= operator
---It has default lua priority not C++:
---Example: 
---C SuS SuS: a*=4+5 --> a=a*4+5
---C++      : a*=4+5 --> a=a*(4+5)
---Current solution: for full priority mimicry -> place sequence into breakets like in examle. 
+-- C++ feature
 F.C={C=>
     F.s[1](C)--load start searcher
     
@@ -354,14 +348,7 @@ B.shl=B.lshift
 B.shr=B.rshift
 @bt={shl='<<',shr='>>',bxor='~',bor='|',band='&',idiv='//'}
 @kp={}('and or , = ; > < >= <= ~= == => -> '):gsub("%S+",(x)=>kp[x]=1;)
-M={bnot=setmetatable({},{
-    __pow=a,b=>
-        @m=(getmetatable(b)||{}).bnot
-        /|m?$m(b);
-        m=type(b)
-        /|m~='number'?error("attempt to perform bitwise operation on a "..m.." value",3);
-        $B.bnot(b);
-})}
+M={}
 for k,v in pairs(bt)do
     @n='__'..k --name of metamethod
     @t='number' --number value type
@@ -376,8 +363,6 @@ for k,v in pairs(bt)do
     M[k]=v=='//'&&{__div=f}||{__concat=f}
                    end
 F.M={C=>
-    --by default compiller not reacts to this operators, required to add for priority support
-    (">= <= ~= =="):gsub("%S+",(x)=>C.O[x]=x;)
     F.s[1](C)
     @l=C.L
     @r=C.R
@@ -397,9 +382,9 @@ F.M={C=>
         C.O[v]=C,o,w=>
             @p=r[#r]:match"%S+" -- grep the value, skip the comments
             /|v=='~'&& --posible unary operator
-              ((p:find"[^%)}%]'\"%P]"&&!p:find"%[=*%[")|| --there is no breaket or string before op or string
+              ((p:find"[^%)}%]'\"%P]"&&p:find"%[=*%[")|| --there is no breaket or string before op or string
               Kt[p]||kp[p])? -- there is no keyword before op
-                  r[#r+1]="cssc.mt.bnot^" $;--bnot located. Insert and return...
+                  r[#r+1]="cssc.bnot^" $;--bnot located. Insert and return...
             table.insert(r,l[#l][k]||l[#l].bor||l[#l].st,"setmetatable({")
             r[#r+1]="},cssc.mt."..k..(v=='//'&&')/'||')..')
             @i=#r+1
@@ -415,4 +400,4 @@ end
 b=b and error(b)
 a=a and a(...)
 
-_G.cssc={features=F,load=L,nilF=N,mt=M,version="3.4-alpha"}
+_G.cssc={features=F,lua_keywords=K,load=L,nilF=N,mt=M,version="3.4-beta"}
