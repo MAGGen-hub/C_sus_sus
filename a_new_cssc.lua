@@ -233,7 +233,6 @@ F.dbg={C,V=> -- V - argument
 --0b0000000 and 0o0000.000 number format support (avaliable exponenta: E+-x)
 F.b={C=>--return function that will be inserted in special extensions table
     C.S.W.b=C,w=>
-        print("bebra")
         @a,b,c,r,t=w:match"^0([bo])(%d*)([eE]?.*)" --RUSH EEEEEEEEEEEEE for exponenta
         /|C.b&&C.R[C.pv]=="."?t,b,c=C.b,w:match"(%d+)([eE]?.*)"--b located! posible floating point!
         \|C.b=nil;
@@ -329,9 +328,6 @@ F.C={C=>
     
     --EQ - table with operators that support *op*= behaviour
     C.EQ={"+","-","*","%","/","..",unpack(C.EQ||{})}--unpack here for functions that added something into C.EQ before
-    --binary keyword operators
-    @k={["and"]=1,["or"]=2}
-    @pk={["not"]=3,["and"]=2,["or"]=3}
     @l=C.L
     @r=C.R
     --operator main parce function
@@ -346,135 +342,68 @@ F.C={C=>
     for i=1,#C.EQ do C.O[C.EQ[i].."=" ]=op end;--END OF F.C
 }
 
---[=====[DEPRECATED!
---operator priority searcher (seaches for last priority sequence) Lua5.3 version
-@op={U='. : ? ( { [ ] } ) ',--unic ops that has no priority
-R=' = , ; '..Ks,--reset priority (all keywords exept and or not)
-'or ',--1 the lowest prior
-'and ',--2
-'< > <= >= ~= == ',--3
-'| ',--4
-'~ ',--5
-'& ',--6
-'<< >> ',--7
-'.. ',--8
-'+ - ',--9
-'* // % ',--10
-u='not # - ~ ',--11 is unary
-'^ '--12 the highest priority
-}
-@pk={['and']=1,['or']=1,['not']=1}
-F.p={C=>
+--Lua5.3 operators feature! Bitwise and idiv operators support!
+--WARNING! This feature has no support of `function()end` constructors! (At last for now)
+--If you want to a = function()end>>5 then use breakets: like this: a = (function()end)>>5
+--Same rule works for lambdas => ->, so BE CAREFULL and DO NOT mix functions and numbers!
+do
+@B={}
+for k,v in pairs(bit32)do B[k]=v end
+B.idiv=a,b->math.floor(a/b);
+B.shl=B.lshift
+B.shr=B.rshift
+@bt={shl='<<',shr='>>',bxor='~',bor='|',band='&',idiv='//'}
+@kp={}('and or , = ; > < >= <= ~= == => -> '):gsub("%S+",(x)=>kp[x]=1;)
+M={}
+for k,v in pairs(bt)do
+    @n='__'..k --name of metamethod
+    @t='number' --number value type
+    @e=v=='//'&&'idiv'||'bitwise'
+    @f=a,b=> --base calculation function
+        @m=(getmetatable(a[1])||{})[n]||(getmetatable(b)||{})[n]
+        /|m?$m(a,b);--metamethod located! Calculation override!
+        m=type(a[1])
+        m=m==t&&type(b)||m
+        /|m~=t?error("Attempt to perform "..e.." operation on a "..m.." value",3);
+        $B[k](a[1],b);
+    M[k]=v=='//'&&{__div=f}||{__concat=f}
+                   end
+F.M={C=>
     F.s[1](C)
     @l=C.L
     @r=C.R
-    @f=C,o=>--function to find MAX cur priority
-        o=o:match"%S+" --exstract operator
-        /|!o?$;
-        o=o.." "
-        /|o:find"^%s*$"||op.U:find(o,1,1)?$;--no priority affection -> skip
-        /|op.R:find(" "..o,1,1)?l[#l].p={l=0}$;-- reset priority table
-        l[#l].p=l[#l].p||{l=0}
-        @c=l[#l].p--if no table then create it!
-        @i,s=0
-        print(o)
-        --UNARY CHECK
-        /|op.u:find(o,1,1)?
-            @p=r[#r]:match"%S*"
-            /|Kt[p]||pk[p]||p:find"[^%P%)%]}]"?
-                c.u=c.u&&c.u||#r+1
-                $;;
-        --BINARY CHECK
-        while !s&&i<11 do i=i+1 s=op[i]:find(o,1,1) end
-        c.pu=c.u -- save object unary operators if exist
-        /|s==nil?$;--last op priority is equal to current op priority
-        /|c.l~=i?
-            c[i]=c.u&&c.u||l[#l].st
-            c.u=!c.u&&c.u||nil;--is binary
-        /|i>c.l?
-            c.m=c[i];
-        /|i<4?c.bt=nil;--bitwize seq reset [this was created only for btw support!]
-        c.i=c.l
-        c.l=i;
-
-    --setup priority function
-    C.S.O.pos=C,a,b=>
-        /|a=='"'||a=='\0'?$;--string\comment mark skip
-        /|type(b)==6?f(C,b);--return replacement
-        f(C,a);--return base
-        
-    C.S.W.pos=C,w=>
-        @p=w:match"%S+"
-        /|pk[p]||Kt[p]?f(C,w);;--equal to keyword
-    ;}]=====]
-
-@bt={shl='<<',shr='>>',bxor='~',bor='|',band='&'}
-@kp={}
-('and or , = ; > < >= <= ~= == => ->'):gsub("%S+",(x)=>kp[x]=1;)
-F.B={C=>
-    F.s[1](C)
-    @l=C.L
-    @r=C.R
+    l.a[1][#l.a[1]+1]=C=>l[#l].bor=#r+1;
     --function to correct priority of sequence (set on O and on W)
     @f=C,o=>
         o=o:match"%S+"--trim
-        /|Kt[o]||kp[o]?
-            l[#l].bst=#r+2 
-            l[#l].bt=nil;;--start of sequence
+        @i=#r+2
+        @b=Kt[o]||kp[o]
+        /|b?l[#l].bor=i; 
+        /|b||(" .. + -"):find(' '..o..' ',1,1)?l[#l].idiv=i;;--start of sequence
     C.S.O.pc=C,a,b=>
         /|type(b)==6?f(C,b)--replacement
         \|f(C,a);;--base
     C.S.W.pc=f 
     for k,v in pairs(bt)do
         C.O[v]=C,o,w=>
-            @i=v=='//'
-            @d=(l[#l].bt)&&""||".st"
-            /|v=='~'&&(r[#r]:find"[^%)}%]%P]"||Kt[r[#r]:match"%S+"]||kp[r[#r]:match"%S+"])?r[#r+1]="cssc.mt.bnot^" $;--l[#l].qo="bnot"$;
-            /|l[#l].bt?r[l[#l].bt-1]=','
-            \|table.insert(r,l[#l].bst||l[#l].st,"cssc.mt(");
-            
-            r[#r+1]=",cssc.bit."..k
-            r[#r+1]=")"..(i&&'/'||'..')
-            l[#l].bt=#r+1;
-                       end
-;}
-
---[===[ REDO! PRIORITY SUPPORT REQUIRED!
-do
-bit32.shl=bit32.lshift --this shortcuts are required!
-bit32.shr=bit32.rshift
-@bt={shl='<<',shr='>>',bxor='~',bor='|',band='&'}
-@t="bitwise_ghost_obj"
-B={}
-F.B={C=>
-    F.s[1](C)
-    @l=C.L
-    @r=C.R
-    C.S.O.pos=C,a,b=>
-        /|a:match"[.:%(%[%]%){}]"?$;
-        l[#l].po=l[#l].qo--previous operator
-        l[#l].qo=a;--'q'urrent operator
-    for k,v in pairs(bt)do
-        C.O[v]=C,o,w=>
-            @s=l[#l].po
-            @d=".."
-            @no=k..d
-            /|v=='~'&&(r[#r]:find"[^%)}%]%P]"||Kt[r[#r]:match"%S+"])?no="bnot^"d="";--unary ~
-            r[#r+1]=d.."cssc.bit."..((s:find"([><])%1"||s:find"[~|&]")&&""||"st.")..no; --no -> new operator
+            @p=r[#r]:match"%S+" -- grep the value, skip the comments
+            /|v=='~'&& --posible unary operator
+              ((p:find"[^%)}%]'\"%P]"&&p:find"%[=*%[")|| --there is no breaket or string before op or string
+              Kt[p]||kp[p])? -- there is no keyword before op
+                  r[#r+1]="cssc.bnot^" $;--bnot located. Insert and return...
+            table.insert(r,l[#l][k]||l[#l].bor||l[#l].st,"setmetatable({")
+            r[#r+1]="},cssc.mt."..k..(v=='//'&&')/'||')..')
+            @i=#r+1
+            @l=l[#l]
+            /|v=='|'?l.bxor=i;
+            /|v:find'[|~]'?l.band=i;
+            /|v:find'[|~&]'?l.shl,l.shr,l.idiv=i,i,i; -- Full support of bitwizes!111 Finaly!
+            /|v:find"([><])%1"?l.idiv=i;;-- Full support of idiv
                        end;}
---Meta
-@f=a,b=>
-    a=getmetatable(a).__type==t&&a||{a}--get ghosts
-    b=getmetatable(b).__type==t&&b||{b}
-    for i=1,#b do a[#a+1]=b[i]end $a;--return ghosts
-
-for k,v in pairs{bnot=1,unpack(bt)}do --setup operators
-    B[k]=setmetatable({{op=k,ghost=true}},{__type=t,__concat=f,__pow=f})
-                                  end
-end ]===]
+end
 
 ]],"SuS",nil,_ENV)--]=]
 b=b and error(b)
 a=a and a(...)
 
-_G.cssc={features=F,lua_keywords=K,load=L,nilF=N,bit=B,version="3.4-beta"}
+_G.cssc={features=F,lua_keywords=K,load=L,nilF=N,mt=M,version="3.4-beta"}
