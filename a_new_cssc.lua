@@ -31,8 +31,7 @@ Ks="if then elseif else local return end function for while in do repeat until b
 Ks:gsub("%S+ ",function(x)K[#K+1]=" "..x end)
 --initialize lambda function feature
 local l=function(C,o) --DO NOT PLACE LAMBDA AT THE START OF FILE!!! You will got ")" instead of "function(*args*)"
-    i=#C.R
-    a=1
+    local i,a,e,p=#C.R,1
     e=C.R[i]
     p=e:find"^%)%s*"and""or"("
     while i>0 and(#p>0 and(a and(e:match"[%w_]+"or"..."==e)or","==e)or#p<1 and not e:find"^%(%s*")do --comma or word or ( if ) located
@@ -56,7 +55,7 @@ K={ ["/|"]=K[1],--[[if]] ["?"]=K[2],--then
     ["&&"]=" and ",--and
     ["!"]=" not ",--not
     [";"]=function(C,o,w) -- any ";" that stand near ";,)]" or "\n" will be replaced by " end " for ex ";;" equal to " end  end "
-              e,a,p,k=" end ",o:match"(;*) *([%S\n]?)%s*([%(\"]?)"
+              local e,a,p,k=" end ",o:match"(;*) *([%S\n]?)%s*([%(\"]?)"
               C.R[#C.R+1]=(#p>0 and (#k<1 or p~="\n") or#a>1)and e:rep(#a)or";"
               return o:sub(#a+1)end},
 
@@ -76,7 +75,8 @@ dbg={function(C,V)
         --C.S.dbg=nil
     end}
 }
-local NL,a,b=load --native CraftOS load function
+P={} --preload table
+NL,a,b=load --native CraftOS load function
 L=function(x,name,mode,env)
     if type(x)=="string" then -- x might be a function or a string
         local c=x:match"^<.->"or x:match"^#!.-\n?<.->" -- locate control string
@@ -102,12 +102,10 @@ L=function(x,name,mode,env)
                 if F[K]then -- feature exist                   -- D here is for default beaviour that expected from C SuS SuS
                     for k,v in pairs(F[K])do O[k]=v end        -- D is not initialised at the start to make commpiller smaller
                     l=F[K][1]and F[K][1](C,V,x,name,mode,env)-- [1] index is used to store special compiller directives
+                    if l then return l end--PRELOAD CHECK
                 end                                          -- if special has argumet V ex: "<pre(V)>" then F["pre"][1](ctrl_table,"V")
             end
             O[1]=nil -- remove trash from current_operators table (all specials in S table now)
-            
-            --PRELOAD CHECK
-            if S.pre then return S.pre end
             
             --COMPILE -- o: operator, w: word
             l=#x+1
@@ -214,6 +212,10 @@ F.err={C=>
     C.F.err=C=>
         /|C.err?$ nil,control_table.err;;;}
 
+--Preload feature
+F.pre={C,V,x,n,m,e=>
+    /|P[V]?$NL(P[V],n,m,e);
+    C.F.pre=C=>P[V]=table.concat(C.R);;}
 --Debug feature
 F.dbg={C,V=> -- V - argument
     @v=V
@@ -337,9 +339,9 @@ F.C={C=>
         l[#l].m={bor=#r+1} --Lua5.3 feature support
         for i=l[#l].st,#r-1 do r[#r+1]=r[i]end --copy variable from the start of an object
         @t=#type(C.O[o])
-        /|t==6?r[#r+1]=C.O[o]
-        :|t==3?r[#r+1]=o
-        \|C.O[o](C,o,w);
+        /|t==6?r[#r+1]=C.O[o]--string
+        :|t==3?r[#r+1]=o--operator
+        \|C.O[o](C,o,w);--function
         l[#l].m={bor=#r+1};--Lua5.3 feature support
     -- main function initialiser        
     for i=1,#C.EQ do C.O[C.EQ[i].."=" ]=op end;--END OF F.C
@@ -363,8 +365,8 @@ M={bnot=setmetatable({},{
         /|m?$m(b);
         m=type(b)
         /|m~='number'?error("Attempt to perform bitwise operation on a "..m.." value",3);
-        $B.bnot(b);
-})}
+        $B.bnot(b);})}
+
 for k,v in pairs(bt)do
     @n='__'..k --name of metamethod
     @t='number' --number value type
@@ -421,4 +423,4 @@ end
 b=b and error(b)
 a=a and a(...)
 
-_G.cssc={features=F,load=L,nilF=N,mt=M,version="3.4-alpha"}
+_G.cssc={features=F,load=L,nilF=N,mt=M,version="3.4-alpha",preload=P,env=_ENV}
