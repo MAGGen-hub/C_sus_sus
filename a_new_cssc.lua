@@ -75,7 +75,6 @@ dbg={function(C,V)
         --C.S.dbg=nil
     end}
 }
-P={} --preload table
 NL,a,b=load --native CraftOS load function
 L=function(x,name,mode,env)
     if type(x)=="string" then -- x might be a function or a string
@@ -214,6 +213,8 @@ F.err={C=>
 
 --Preload feature
 F.pre={C,V,x,n,m,e=>
+    /|!cssc.preload?cssc.preload={};
+    @P=cssc.preload
     /|P[V]?$NL(P[V],n,m,e);
     C.F.pre=C=>P[V]=table.concat(C.R);;}
 --Debug feature
@@ -423,4 +424,4 @@ end
 b=b and error(b)
 a=a and a(...)
 
-_G.cssc={features=F,load=L,nilF=N,mt=M,version="3.4-alpha",preload=P,env=_ENV}
+_G.cssc={features=F,load=L,nilF=N,mt=M,version="3.4-alpha",env=_ENV}
