@@ -327,17 +327,20 @@ F.C={C=>
     F.s[1](C)--load start searcher
     
     --EQ - table with operators that support *op*= behaviour
-    C.EQ={"+","-","*","%","/","..",unpack(C.EQ||{})}--unpack here for functions that added something into C.EQ before
+    C.EQ={"+","-","*","%","/","..","^",unpack(C.EQ||{})}
     @l=C.L
     @r=C.R
     --operator main parce function
     @op=C,o,w=>
         o=o:match"(.-)=" --for this we need only the first part of operator
-        /|#type(C.O[o])==6?o=" "..C.O[o].." ";
-        r[#r+1]="="--insert equality 
+        r[#r+1]="="--insert equality
+        l[#l].m={bor=#r+1} --Lua5.3 feature support
         for i=l[#l].st,#r-1 do r[#r+1]=r[i]end --copy variable from the start of an object
-        r[#r+1]=o; --add operator 
-                               
+        @t=#type(C.O[o])
+        /|t==6?r[#r+1]=C.O[o]
+        :|t==3?r[#r+1]=o
+        \|C.O[o](C,o,w);
+        l[#l].m={bor=#r+1};--Lua5.3 feature support
     -- main function initialiser        
     for i=1,#C.EQ do C.O[C.EQ[i].."=" ]=op end;--END OF F.C
 }
@@ -359,7 +362,7 @@ M={bnot=setmetatable({},{
         @m=(getmetatable(b)||{}).bnot
         /|m?$m(b);
         m=type(b)
-        /|m~='number'?error("attempt to perform bitwise operation on a "..m.." value",3);
+        /|m~='number'?error("Attempt to perform bitwise operation on a "..m.." value",3);
         $B.bnot(b);
 })}
 for k,v in pairs(bt)do
@@ -378,17 +381,20 @@ for k,v in pairs(bt)do
 F.M={C=>
     --by default compiller not reacts to this operators, required to add for priority support
     (">= <= ~= =="):gsub("%S+",(x)=>C.O[x]=x;)
+    --require"cc.pretty".pretty_print(C.EQ)
+    C.EQ={">>","<<","&","|",unpack(C.EQ||{})}
     F.s[1](C)
     @l=C.L
     @r=C.R
-    l.a[1][#l.a[1]+1]=C=>l[#l].bor=#r+1;
+    l[#l].m={bor=1}
+    l.a[1][#l.a[1]+1]=C=>l[#l].m={bor=#r+1};
     --function to correct priority of sequence (set on O and on W)
     @f=C,o=>
         o=o:match"%S+"--trim
         @i=#r+2
         @b=Kt[o]||kp[o]
-        /|b?l[#l].bor=i; 
-        /|b||(" .. + -"):find(' '..o..' ',1,1)?l[#l].idiv=i;;--start of sequence
+        /|b?l[#l].m={bor=i}; 
+        /|b||(" .. + -"):find(' '..o..' ',1,1)?l[#l].m.idiv=i;;--start of sequence
     C.S.O.pc=C,a,b=>
         /|type(b)==6?f(C,b)--replacement
         \|f(C,a);;--base
@@ -400,14 +406,14 @@ F.M={C=>
               ((p:find"[^%)}%]'\"%P]"&&!p:find"%[=*%[")|| --there is no breaket or string before op or string
               Kt[p]||kp[p])? -- there is no keyword before op
                   r[#r+1]="cssc.mt.bnot^" $;--bnot located. Insert and return...
-            table.insert(r,l[#l][k]||l[#l].bor||l[#l].st,"setmetatable({")
+            table.insert(r,l[#l].m[k]||l[#l].m.bor||l[#l].st,"setmetatable({")
             r[#r+1]="},cssc.mt."..k..(v=='//'&&')/'||')..')
             @i=#r+1
             @l=l[#l]
-            /|v=='|'?l.bxor=i;
-            /|v:find'[|~]'?l.band=i;
-            /|v:find'[|~&]'?l.shl,l.shr,l.idiv=i,i,i; -- Full support of bitwizes!111 Finaly!
-            /|v:find"([><])%1"?l.idiv=i;;-- Full support of idiv
+            /|v=='|'?l.m.bxor=i;
+            /|v:find'[|~]'?l.m.band=i;
+            /|v:find'[|~&]'?l.m.shl,l.m.shr,l.m.idiv=i,i,i; -- Full support of bitwizes!111 Finaly!
+            /|v:find"([><])%1"?l.m.idiv=i;;-- Full support of idiv
                        end;}
 end
 
