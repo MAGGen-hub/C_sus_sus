@@ -108,11 +108,9 @@ L=function(x,name,mode,env)
             
             --COMPILE -- o: operator, w: word
             l=#x+1
-            C.ml=l
             for o,w,i in x:gmatch"([%s!#-&(-/:-@\\-^{-~`]*%[?=*[%['\"]?%s*)([%w_]*[^%w%p%s]*[^\n%S]*)()"do
                                         -- see that pattern? Now try to spell it in one breath! =P
-                                        -- in this pattern the word (w) will never be "^%s*$"!
-                --LINE COUNTER
+                --LINE COUNTER          -- in this pattern the word (w) will never be "^%s*$"!
                 o:gsub("\n",function()C.l=C.l+1 end)
                 --STRING MODE: string or comment located and must be captured
                 if s then
@@ -123,7 +121,6 @@ L=function(x,name,mode,env)
                         if c then c=C.c
                         else 
                             for k,v in pairs(S.W)do t=v(C,t,i)or t end --word/string parcers/overriders
-                            C.pv=#R+1 --save index of previous value
                             c=R
                         end
                         c[#c+1]=t -- insert object
@@ -169,14 +166,11 @@ L=function(x,name,mode,env)
                                     break -- operator found! break out...
                                 end
                             end
-                            C.pv=(a=="\0"or b=="")and C.pv or #R --save last value index (comments keept unsaved) ""->empty result means no value!
-                            
                         end
                         --WORD
                         if #w>0 then
                             for k,v in pairs(S.W)do w=v(C,w,i)or w end --word/string parcers/overriders
                             R[#R+1]=w --insert word
-                            C.pv=#R --save index of previous value
                         end
                     end
                 end 
@@ -184,8 +178,9 @@ L=function(x,name,mode,env)
             
             --FINISH COMPILE
             a,b=nil
-            for k,v in pairs(C.F) do 
-                a,b=v(C,x,name,mode,env)--launch all finalizer function
+            for k,v in pairs(C.F) do
+                a,b,e=v(C,x,name,mode,env)--launch all finalizer function
+                if e then env=e end --custom env support
                 if a or b then return a,b end -- if finaliser return something then return it vithout calling native load
             end
             x=table.concat(R)
@@ -199,6 +194,9 @@ end
 a,b=L([[<K,E,F,dbg>
 --local keyword access table
 @Kt={} for i=1,#K do Kt[K[i]:match"%S+" ]=i end
+
+--Environmet table
+env={}
 
 --Default features: comment parcing
 F.D={["\0"]=C=>@r=C.R r[#r]=r[#r].." "..(table.remove(C.c,1)||"");,
@@ -217,6 +215,7 @@ F.pre={C,V,x,n,m,e=>
     @P=cssc.preload
     /|P[V]?$NL(P[V],n,m,e);
     C.F.pre=C=>P[V]=table.concat(C.R);;}
+
 --Debug feature
 F.dbg={C,V=> -- V - argument
     @v=V
@@ -260,7 +259,6 @@ F.l={C=>
             for k,v in pairs(a)do v(C,o,w)end;
                         end;}           -- This code is hard to understand because
                                         -- it was sponsored by Peppino Spagetti from Pizza Tower PC game
-
 --start searcher initialiser
 F.s={C=>
     --init leveling function
@@ -361,7 +359,7 @@ F.C={C=>
     for i=1,#a do
         /|tof(v[1])==a[i]?$true;
               end $false;}
-
+env.typeof=tof--include typeof into CSSC environment
 F.IS={C=>
     F.s[1](C)
     @l=C.L
@@ -407,7 +405,7 @@ for k,v in pairs(bt)do
                    end
 F.M={C=>
     --by default compiller not reacts to this operators, required to add for priority support
-    (">= <= ~= =="):gsub("%S+",(x)=>C.O[x]=x;)
+    --(">= <= ~= =="):gsub("%S+",(x)=>C.O[x]=x;)
     --require"cc.pretty".pretty_print(C.EQ)
     C.EQ={">>","<<","&","|",unpack(C.EQ||{})}
     F.s[1](C)
@@ -444,7 +442,31 @@ F.M={C=>
                        end;}
 end
 
-_G.cssc={features=F,load=L,nilF=N,mt=M,version="3.4-alpha",env=_ENV,is=is,typeof=tof}
+--CSSC ENVIRONMENT addition
+F.ENV={C=>
+    C.F.env=C,x,n,m,e=>
+        e=e||{}
+        for k,v in pairs(env)do e[k]=v end
+        return nil,nil,e--nev env
+        ;;}
+
+--DEFAULT: ALL INCLUSIVE (E feature disabled!)
+F.A={C=>
+ F.M[1](C) -- Lua5.3 opts
+ F.K[1](C) -- Keyword shortcuts
+ F.IS[1](C)-- IS keyword
+ F.N[1](C) -- nil forgiving operators
+ F.C[1](C) -- X= operators
+ F.b[1](C) -- octal and binary number formats
+ F.ENV[1](C)-- Custom environment
+ for K,V in pairs{F.K,F.F}do
+     for k,v in pairs(V)do
+         C.o[k]=v
+     end
+ end
+ ;}
+
+_G.cssc={features=F,load=L,nilF=N,mt=M,version="3.4-alpha",__CSSC=_ENV,is=is,env=env}
 ]],"SuS",nil,_ENV)--]=]
 b=b and error(b)
 a=a and a(...)
