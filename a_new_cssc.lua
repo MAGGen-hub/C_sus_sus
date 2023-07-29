@@ -46,10 +46,10 @@ F={
 --initialise main features::
 
 -- keywords and "if else then" shortcut section
-K={ ["/|"]=K[1],--[[if]] ["?"]=K[2],--then
+E={ ["/|"]=K[1],--[[if]] ["?"]=K[2],--then
     [":|"]=K[3],--elseif
-    ["\\|"]=K[4],--else
-    ["@"]=K[5],--local
+    ["\\|"]=K[4]},--else
+K={ ["@"]=K[5],--local
     ["$"]=K[6],--return
     ["||"]=" or ",--or
     ["&&"]=" and ",--and
@@ -196,7 +196,7 @@ L=function(x,name,mode,env)
 end
 
 --COMPILLER EXTENSIONS:load other features of compiler using compiler ITSELF (can be used as example of C SuS SuS programming)
-a,b=L([[<K,F,dbg>
+a,b=L([[<K,E,F,dbg>
 --local keyword access table
 @Kt={} for i=1,#K do Kt[K[i]:match"%S+" ]=i end
 
@@ -276,7 +276,8 @@ F.s={C=>
         --check previous value for opts that continue the object " . : " 
         /|p:match"^[.:]"&&!p:match"%.%."?$;--exit
         --if current value is a string
-        /|w:find"^[%['\"].-[%]'\"]"&&p:find"[%w_%]%)}\"']"?$;--previous value was a breaket or word (func"" "shortcut call") or string (func()""[]{}"" multy shortcall) (operators skip)
+        @ch=p:match"^ ?[%w_%]%)}\"']+"||""
+        /|w:find"^[%['\"].-[%]'\"]"&&!Kt[ch]&&!(" and or not "):find(" "..ch.." ")?$;--previous value was a breaket or word (func"" "shortcut call") or string (func()""[]{}"" multy shortcall) (operators skip)
         --start of object found
         l[#l].st=#r+1;;} --set word as start
 
@@ -321,7 +322,7 @@ F.K[1]=C=>C.EQ={"&&","||",unpack(C.EQ||{})};
 
 -- X= operators feature
 --WARNING! This feature has only partual support of C++ X= operator
---It has default lua priority not C++:
+--It has default lua priority, not C++:
 --Example: 
 --C SuS SuS: a*=4+5 --> a=a*4+5
 --C++      : a*=4+5 --> a=a*(4+5)
@@ -348,6 +349,28 @@ F.C={C=>
     for i=1,#C.EQ do C.O[C.EQ[i].."=" ]=op end;--END OF F.C
 }
 
+--IS keyword simular to type of
+--WARNING! "is" keyword accepts as second argument only strings or variables in breakets
+--EXAMPLE: first_arg is "second_arg", first_arg is {"second_arg","third_arg"}, first_arg is (second_arg)
+--This: (first_arg is second_arg) will emit an error!
+@tof=o->(getmetatable(o)||{}).__type||type(o);
+@is={__call=v,...=>
+    @a={...}
+    /|#a<1?$false;
+    /|#type(a[1])==5?a=a[1];
+    for i=1,#a do
+        /|tof(v[1])==a[i]?$true;
+              end $false;}
+
+F.IS={C=>
+    F.s[1](C)
+    @l=C.L
+    C.S.W[1]=C,w=>
+        w=w:match"%S+"
+        /|w=='is'?
+            table.insert(C.R,l[#l].st,"setmetatable({")
+            $"},cssc.is)";;;}
+
 --Lua5.3 operators feature! Bitwise and idiv operators support!
 --WARNING! This feature has no support of `function()end` constructors! (At last for now)
 --If you want to a = function()end>>5 then use breakets: like this: a = (function()end)>>5
@@ -360,12 +383,13 @@ B.shl=B.lshift
 B.shr=B.rshift
 @bt={shl='<<',shr='>>',bxor='~',bor='|',band='&',idiv='//'}
 @kp={}('and or , = ; > < >= <= ~= == => -> '):gsub("%S+",(x)=>kp[x]=1;)
+@f=t,m->"Attempt to perform"..t.."bitwise operation on a "..m.." value";
 M={bnot=setmetatable({},{
     __pow=a,b=>
         @m=(getmetatable(b)||{}).bnot
         /|m?$m(b);
         m=type(b)
-        /|m~='number'?error("Attempt to perform bitwise operation on a "..m.." value",3);
+        /|m~='number'?error(f('bitwise',m),3);
         $B.bnot(b);})}
 
 for k,v in pairs(bt)do
@@ -377,7 +401,7 @@ for k,v in pairs(bt)do
         /|m?$m(a,b);--metamethod located! Calculation override!
         m=type(a[1])
         m=m==t&&type(b)||m
-        /|m~=t?error("Attempt to perform "..e.." operation on a "..m.." value",3);
+        /|m~=t?error(f(e,m),3);
         $B[k](a[1],b);
     M[k]=v=='//'&&{__div=f}||{__concat=f}
                    end
@@ -420,8 +444,7 @@ F.M={C=>
                        end;}
 end
 
+_G.cssc={features=F,load=L,nilF=N,mt=M,version="3.4-alpha",env=_ENV,is=is,typeof=tof}
 ]],"SuS",nil,_ENV)--]=]
 b=b and error(b)
 a=a and a(...)
-
-_G.cssc={features=F,load=L,nilF=N,mt=M,version="3.4-alpha",env=_ENV}
