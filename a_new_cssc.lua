@@ -230,7 +230,7 @@ F.dbg={C,V=> -- V - argument
 F.b={C=>--return function that will be inserted in special extensions table
     C.S.W.b=C,w=>
         @a,b,c,r,t=w:match"^0([bo])(%d*)([eE]?.*)" --RUSH EEEEEEEEEEEEE for exponenta
-        /|C.b&&C.R[C.pv]=="."?t,b,c=C.b,w:match"(%d+)([eE]?.*)"--b located! posible floating point!
+        /|C.b&&C.R[#C.R]=="."?t,b,c=C.b,w:match"(%d+)([eE]?.*)"--b located! posible floating point!
         \|C.b=nil;
         /|b?--number exist
           t,r=t||(a>"b"&&"8"||"2"),0 --You are a good person if you read this (^_^)
@@ -268,11 +268,11 @@ F.s={C=>
     @l=C.L
     @r=C.R
     /|l[1].st?$; -- Searcher was inited before! Skip!
-    l.b[1][#l.b[1]+1]=C=>/|Kt[r[C.pv]:match"%w*"]||!r[C.pv]:find"[%w_%}%]%)\"']"?l[#l].st=#r+1;; --on level open
+    l.b[1][#l.b[1]+1]=C=>/|Kt[r[#r]:match"%w*"]||!r[#r]:find"[%w_%}%]%)\"']"?l[#l].st=#r+1;; --on level open
     l.a[1][#l.a[1]+1]=C=>l[#l].st=#r+1; --after level open
     l[1].st=1--first start of object is start of file (it must be set to avoid errors)
     C.S.W.st=C,w,i=> -- Cow says "MOOO"; F.s says "start of object is here *table index*"
-        @p=r[C.pv]
+        @p=r[#r]
         --check previous value for opts that continue the object " . : " 
         /|p:match"^[.:]"&&!p:match"%.%."?$;--exit
         --if current value is a string
@@ -298,13 +298,13 @@ F.N={C=>
     F.s[1](C)--load start searcher!
     @p=C.O["?"]--if E feature was enabled
     @r=C.R
-    @f=C,b=> /|r[C.pc]==r[C.pv]?table.insert(r,C.ci,",'"..r[C.pv].."'");--function to insert index if index have a call after it
+    @f=C,b=> /|r[C.pc]==r[#r]?table.insert(r,C.ci,",'"..r[#r].."'");--function to insert index if index have a call after it
              C.pc,C.L.b[1].pc,C.S.W.str=nil;
     
     @e="Attempt to perform '"
     C.O["?"]=C,o,w=>
         @a=o:match'.([.:%[%({"]?)'
-        /|!r[C.pv]:find"^ ?[%w_%]%)}\"']%s-"?err(C,e.."?"..(a||"").."' on '"..(r[C.pv]:match"^ ?%S*"or"nil").."'");--if previous value was an operator
+        /|!r[#r]:find"^ ?[%w_%]%)}\"']%s-"?err(C,e.."?"..(a||"").."' on '"..(r[#r]:match"^ ?%S*"or"nil").."'");--if previous value was an operator
         /|#a>0?
             /|a:find"[.:]"&&!o:sub(3):find"^[\0%s]*$"?err(C,e..o:sub(3).."' on '?"..a.."'");--error if ?[.:] has operators but not word after it 
             table.insert(r,C.L[#C.L].st," cssc.nilF(") --Insert a breaket at the start of object!
