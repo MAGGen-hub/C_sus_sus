@@ -30,6 +30,18 @@ t={
     --indexing test
     print(("This will work: %s")?:format"yes")
     p?.--[[another troublemaker]]pp""
+]==]},
+--M FEATURE TEST SECTION
+{"M Feature test N\xB01",[==[<M,dbg(p)>
+    l=" Lua5.3:    "
+    c="C SuS SuS:"
+    print(l.."0\n",c,5 + 6 >> 2 + (4 | 2))
+    print(l.."11\n",c,(5 + 6 >> 1) + (4 | 2))
+    calc = 5 | 6 & 3 >> 1
+    print(l.."5\n",c,calc)
+    print(l.."7\n",c, (5 | 6 & 3 >> 1--[[]] | 3) )
+    t=setmetatable({},{__bor=function(a,b) print(" Custom bor",a,b) return " Result of t{} | 4" end})
+    print(t | 4)
 ]==]}
 }
 if not i then
