@@ -406,6 +406,7 @@ for k,v in pairs(bt)do
 F.M={C=>
     --by default compiller not reacts to this operators, required to add for priority support
     --(">= <= ~= =="):gsub("%S+",(x)=>C.O[x]=x;)
+    C.O['~=']='~='
     --require"cc.pretty".pretty_print(C.EQ)
     C.EQ={">>","<<","&","|",unpack(C.EQ||{})}
     F.s[1](C)
@@ -461,7 +462,7 @@ F.A={C=>
  F.ENV[1](C)-- Custom environment
  for K,V in pairs{F.K,F.F}do
      for k,v in pairs(V)do
-         C.o[k]=v
+         C.O[k]=v
      end
  end
  ;}
