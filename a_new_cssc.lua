@@ -467,7 +467,7 @@ F.A={C=>
  end
  ;}
 
-_G.cssc={features=F,load=L,nilF=N,mt=M,version="3.4-alpha",__CSSC=_ENV,is=is,env=env}
+_G.cssc={features=F,load=L,nilF=N,mt=M,version="3.4-alpha",creator="M.A.G.Gen.",__CSSC=_ENV,is=is,env=env}
 ]],"SuS",nil,_ENV)--]=]
 b=b and error(b)
 a=a and a(...)
