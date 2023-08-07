@@ -2,13 +2,22 @@
 cssc_code=cssc_code or ""
 env_pack_code = env_pack_code or ""
 startup_code=[[
-shell.run("%s")
-shell.run("%s")
+local S,s,c,g,e,C,b=settings,shell,"cssc.","global_load","enable"," C SuS SuS ","boolean"
+S.define(c..g,{description="Replaces `_G.load` with `cssc.load` for global"..C.."support.",default=false,type=b})
+S.define(c..e,{description="Enables"..C,default=true,type=b})
+S.load()
+if S.get(c..e)then
+s.run("%s")
+s.run("%s")
+if S.get(c..g)then
+_G.load=cssc.load
+end
+end
 ]]
 
---skips
-local intro=false
-local about=false
+--parts
+local intro=true
+local about=true
 
 function rainbowPrintEffect(text,delay)
     local next,fg,bg,X,Y,prev=0,term.getTextColor(),term.getBackgroundColor()
@@ -64,7 +73,18 @@ end
 wlc="W E L C O M E"
 maxX,maxY=term.getSize()
 
---skip intro
+--skip or not intro
+parallel.waitForAny(
+    function() 
+        repeat 
+        local ev,key=os.pullEvent"key" 
+        if key==keys.space or key==keys.enter then
+            break
+        end
+        until false
+        loadPal()
+    end,
+function()
 if intro then
 
 --backup
@@ -112,11 +132,11 @@ term.setPaletteColor(colors.blue,term.getPaletteColor(colors.lightBlue))
 
 --blit images
 term.setTextColor(colors.lightGray)
-term.setCursorPos((maxX-26.5)/2,maxY/2)
+term.setCursorPos((maxX-28.5)/2,maxY/2)
 term.blit("\x98\x8C\x9B  "..(s_up .t..u_up.t..s_up.t.." "):rep(2),"bb3bb"..(s_up.f..u_up.f..s_up.f.."8"):rep(2),"33b33"..(s_up.b..u_up.b..s_up.b.."3"):rep(2))
-term.setCursorPos((maxX-26.5)/2,maxY/2+1)
+term.setCursorPos((maxX-28.5)/2,maxY/2+1)
 term.blit("\x95    "      ..(s_mid.t..u_mid.t..s_mid.t.." "):rep(2),"bbbbb"..(s_mid.f..u_mid.f..s_mid.f.."6"):rep(2),"33333"..(s_mid.b..u_mid.b..s_mid.b.."3"):rep(2))
-term.setCursorPos((maxX-26.5)/2,maxY/2+2)
+term.setCursorPos((maxX-28.5)/2,maxY/2+2)
 term.blit("\x89\x8C\x86  "..(s_dwn.t:rep(3).." "):rep(2),"bbbbb"..(s_dwn.f:rep(3).."6"):rep(2),"33333"..(s_dwn.b:rep(3).."3"):rep(2))
 
 animate_color(colors.blue,colors.lightGray,0.02,50)
@@ -135,6 +155,7 @@ sleep(0.5)
 
 loadPal()
 end
+end)
 
 -- logo
 --image=paintutils.parseImage("3bb3eee33eee3\nb333bbee3bbee\nb333eeee3eeee\n3bb3e3e33e3e3")
@@ -184,7 +205,7 @@ function continue()
     until stop
     term.redirect(crnt)
     if stop==keys.n then
-        paintutils.drawFilledBox(1,1,maxX,maxY,colors.black)
+        --paintutils.drawFilledBox(1,1,maxX,maxY,colors.black)
         return true
     end
 end
@@ -256,7 +277,11 @@ that 100% will be done in future may break some dependencies in your project.
 
 Continue instalation? [Y/N]
 ]])
-if continue() then return end
+if continue() then 
+print("Canceled by user. Press any key to exit...")
+os.pullEvent("key")
+return 
+end
 end
 paintutils.drawFilledBox(4,5,maxX,maxY,colors.lightBlue)
 os.pullEvent()
@@ -269,10 +294,10 @@ api_folder=readPath(4,6,"1. Api instalation folder:","/apis/cssc")
 
 -- Ask for env package
 --print("\n   (Leave next's empty if you don't need it)")
-cssc_path=readPath(4,8,"3. Cssc main module:",api_folder.."/cssc.lua")
-env_package_path=readPath(4,10,"2. _ENV-pack:",api_folder.."/env_pack.lua")
+cssc_path=readPath(4,7,"3. Cssc main module:",api_folder.."/cssc.lua")
+env_package_path=readPath(4,8,"2. _ENV-pack:",api_folder.."/env_pack.lua")
 
-startup_path=readPath(4,12,"3. Startup:","startup/00_cssc.lua")
+startup_path=readPath(4,9,"3. Startup:","startup/00_cssc.lua")
 
 cssc_set=cssc_path:match"%S"
 envP_set=env_package_path:match"%S"
@@ -280,20 +305,51 @@ startup_set=startup_path:match"%S"
 
 --Generate startup
 if startup_set then
-    startup_code=startup_code:format(cssc_path,env_package)
+    startup_code=startup_code:format(cssc_path,env_package_path)
 end
 
 --Total
-print(                 "\n   4. Selected modules:"..
+print(                   "   4. Selected modules:"..
       (cssc_set    and("\n      - C SuS SuS Compiller:%8.2f Kbs"):format(#cssc_code/1024.0)or"")     ..
       (envP_set    and("\n      - _ENV-pack:          %8.2f Kbs"):format(#env_pack_code/1024.0)or"")..
       (startup_set and("\n      - Startup module:     %8.2f Kbs"):format(#startup_code/1024.0)or"")..
                     ("\n\n      = Total size:         %8.2f Kbs"):format(((cssc_set and#cssc_code or 0)+
                                                                       (envP_set and#env_pack_code or 0)+
                                                                       (startup_set and#startup_code or 0))/1024))
+local x,y = term.getCursorPos()
 print("\n      Continue instalation? [Y/N]")
-if continue() then return end
- 
+if continue() then 
+print("      Canceled by user. Press any key to exit...")
+os.pullEvent("key")
+return end
+paintutils.drawLine(x,y+1,40,y+1)
+term.setCursorPos(x,y)
+write("\n      Installing. Please wait")
 
+
+--INTERFACE PART END
+
+--MAIN PART
+base="/data/progs/a_new_cssc/compile/"
+
+for k,v in pairs{[cssc_path]=cssc_code,[env_package_path]=env_pack_code,[startup_path]=startup_code}do
+    if k:match"%S" then
+        local file=fs.open(base..k,'w')
+        --if not file then print(k) return end
+        file.write(v)
+        file.close()
+        sleep(0.3) 
+        write('.')
+    end
+end
+sleep(0.3)
+paintutils.drawLine(x,y+1,40,y+1)
+term.setCursorPos(x,y)
+print("\n      Unpacking complete. Reboot your PC to apply changes.")
+print("\n      Reboot now? [Y/N]")
+local reboot= not continue()
+print("\n      Instalation complete. Press any key to exit...")
+os.pullEvent("key")
+if reboot then os.reboot()end
 
 

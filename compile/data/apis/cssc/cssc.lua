@@ -1,4 +1,3 @@
-
 K={}
 Ks="if then elseif else local return end function for while in do repeat until break "
 Kb={}
