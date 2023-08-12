@@ -332,6 +332,7 @@ F.C={C=>
     @l=C.L
     @r=C.R
     --operator main parce function
+    --TODO insert end searcher feature for ?= operator support in C SuS SuS future versions...
     @op=C,o,w=>
         o=o:match"(.-)="--for this we need only the first part of operator
         r[#r+1]="="--insert equality
@@ -351,7 +352,7 @@ F.C={C=>
 --EXAMPLE: first_arg is "second_arg", first_arg is {"second_arg","third_arg"}, first_arg is (second_arg)
 --This: (first_arg is second_arg) will emit an error!
 @tof=o->(getmetatable(o)||{}).__type||type(o);
-@is={__call=v,...=>
+@is={__concat=v,...=>
     @a={...}
     /|#a<1?$false;
     /|#type(a[1])==5?a=a[1];
@@ -366,7 +367,7 @@ F.IS={C=>
         w=OBJ(w)
         /|w=='is'?
             table.insert(C.R,l[#l].st,"setmetatable({")
-            $"},cssc.is)";;;}
+            $"},cssc.is)..";;;}
 
 --Lua5.3 operators feature! Bitwise and idiv operators support!
 --WARNING! This feature has no support of `function()end` constructors! (At last for now)
