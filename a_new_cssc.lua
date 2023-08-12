@@ -56,10 +56,7 @@ K={ ["@"]=K[5],--local
     ["||"]=" or ",--or
     ["&&"]=" and ",--and
     ["!"]=" not ",--not
-    [";"]=function(C,o,w) -- any ";" that stand near ";,)]" or "\n" will be replaced by " end " for ex ";;" equal to " end  end "
-              local e,a,p,k=K[7],o:match"(;*) *([%S\n]?)%s*([%(\"]?)"
-              C.R[#C.R+1]=(#p>0 and (#k<1 or p~="\n") or#a>1)and e:rep(#a)or";"
-              return o:sub(#a+1)end},
+    [";"]=K[7]},
 
 --lambda section
 F={ ["->"]=l,
@@ -193,7 +190,12 @@ end
 
 --COMPILLER EXTENSIONS:load other features of compiler using compiler ITSELF (can be used as example of C SuS SuS programming)
 a,b=L([[<K,E,F,dbg>
---OBJ function| UNUSED
+F.K[';']=C,o,w=> -- any ";" that stand near ";,)]" or "\n" will be replaced by " end " for ex ";;" equal to " end  end "
+    @e,a,p=K[7],o:match"(;*) *([%S\n]?)%s*"
+    print(#p)
+    C.R[#C.R+1]=(#p>0&&p~="("||#a>1)&&e:rep(#a)||";"
+    $o:sub(#a+1);
+--OBJ function
 OBJ=o->o:match"%S+";
 
 --Environmet table
@@ -323,7 +325,7 @@ F.K[1]=C=>C.EQ={"&&","||",unpack(C.EQ||{})};
 --Example: 
 --C SuS SuS: a*=4+5 --> a=a*4+5
 --C++      : a*=4+5 --> a=a*(4+5)
---Current solution: for full priority mimicry -> place sequence into breakets like in examle. 
+--Current solution: for full priority mimicry -> place sequence into breakets like in examle.
 F.C={C=>
     F.s[1](C)--load start searcher
     
@@ -332,7 +334,7 @@ F.C={C=>
     @l=C.L
     @r=C.R
     --operator main parce function
-    --TODO insert end searcher feature for ?= operator support in C SuS SuS future versions...
+    --TODO insert end searcher feature for ?= operator support in C SuS SuS future versions... (this feature will apear only after function leveling realisation)
     @op=C,o,w=>
         o=o:match"(.-)="--for this we need only the first part of operator
         r[#r+1]="="--insert equality
@@ -443,11 +445,11 @@ F.M={C=>
                        end;}
 end
 
---CSSC ENVIRONMENT addition
+--CSSC ENVIRONMENT addition (temporal! will be replaced with require"mg.cssc")
 F.ENV={C=>
     C.F.env=C,x,n,m,e=>
         e=e||{}
-        for k,v in pairs(env)do e[k]=v end
+        for k,v in pairs(env)do e[k]=v end --might be replaced with require"mg.cssc"
         return nil,nil,e--nev env
         ;;}
 
