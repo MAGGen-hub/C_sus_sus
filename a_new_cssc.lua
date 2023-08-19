@@ -1,35 +1,11 @@
--- C SuS SuS Programming language compiler 3.4-alpha
-
--- VARIABLE DOCUMENTATION
-    --(variables already minified because it takes THE HECK OF A LOT time to find and replce them all after prog done)
-    --IMPORTANT TABLES
-    -- F - table with C SuS SuS language features
-    -- R - table with parcing results
-    -- S - table with special compiller extensions
-    -- O - table with operators enable for current script
-    -- C - control tablet that contains R,S,O tablets and other data for operators/specials functions (first argument to each function)
-        -- C.F - table with finaliser functions that run after main script
-        -- C.L - table with breaket levels: disabled by default but could be used by some features
-        -- C.l - current line
-    --CALCULATION VARS
-    -- t - temp: used to store unfinished strings and some other temporal data
-    -- s - str_mode: used to switch compiller to string or comment parceing mode
-    -- R - result: table with parced code
-    -- c - in compiller used to grab comments and throw them away from operator/word squence
-    -- a - start_point of string/other data storage
-    -- b - end point of string/other data storage
-    -- i - usualy used for index
-    -- p - posible *something*
-    -- l - temporal container
-    -- e - temporal container (used to calculate lines in main script)
-    -- Some of variables may diaspear from script in future
+-- C SuS SuS Programming language compiler 3.5 - alpha
 
 --CODE START
 --this section contain all lua keywords for specific features
 K={}
 Ks="if then elseif else local return end function for while in do repeat until break "
 Kb={}
-Ks:gsub("(%S+)( )",function(x,s)K[#K+1]=s..x..s  end)
+Ks:gsub("(%S+)( )",function(x,s)K[#K+1]=s..x..s Kb[x]=#K end)
 --initialize lambda function feature
 local l=function(C,o) --DO NOT PLACE LAMBDA AT THE START OF FILE!!! You will got ")" instead of "function(*args*)"
     local i,a,e,p=#C.R,1
@@ -40,6 +16,7 @@ local l=function(C,o) --DO NOT PLACE LAMBDA AT THE START OF FILE!!! You will got
         e=C.R[i] end
     table.insert(C.R,#p<1 and i or i+1,K[8]..p)-- K[8] - function keyword K[6] - return
     C.R[#C.R+1]=(#p>0 and")"or"")..(o:sub(1,1)=="-"and K[6]or"") --WARNING!!! Thanks for your attention! =)
+    if C.L then C.C.L(1)end
 end
 
 --FEATURES TABLE
@@ -80,20 +57,10 @@ L=function(x,name,mode,env)
         if c then --control string exists!
         
             --INITIALISE LOCALS
-            local po,R,S,O,C,s,t,a,b,l,e="",{""},{W={},O={}},{['"']="",["\0"]="\n",['..']='..',['...']='...'} -- " - for strings \0 - for comments
+            local po,R,O,C,s,t,a,b,l,e="",{""},{['"']="",["\0"]="\n",['..']='..',['...']='...'} -- " - for strings \0 - for comments
             x=x:sub(#c+1) --remove control string to start parsing
-            C={O=O,S=S,R=R,F={},c={},l=1,pv=1} -- initialise control tablet for special functions calls
-                -- Control table specification
-                -- O - enabled operators
-                -- S - enabled special functions
-                -- R - result table
-                -- F - finaliser functions
-                -- c - table with comments
-                -- l - line of code (used to catch errors)
-                -- L - table with levels (in witch breaket we are?)
-                -- pv - previous value (can be an operator, a word or string)
-                
-            
+            C={O=O,C=function()end,R=R,F={},c={},l=1,pv=1} -- initialise control tablet for special functions call
+                 --S -> the core module (empty by default)
             --INITIALIZE COMPILLER
             for K,V in ("D"..c):gmatch"([%w_]+)%(?([%w_. ]*)"do--load flags that used in control string: K - feature name V - feature argument
                 if F[K]then -- feature exist                   -- D here is for default beaviour that expected from C SuS SuS
@@ -118,7 +85,7 @@ L=function(x,name,mode,env)
                         t=t..o:sub(0,b) --finish string
                         if c then c=C.c
                         else 
-                            for k,v in pairs(S.W)do t=v(C,t,i)or t end --word/string parcers/overriders
+                            t=C.C(nil,t,i)or t --CORE module
                             c=R
                         end
                         c[#c+1]=t -- insert object
@@ -153,7 +120,7 @@ L=function(x,name,mode,env)
                                 a=o:sub(1,i)  -- a variable here used to store enabled_operators[posible operator]
                                 b=O[a] or i<2 and a
                                 if b and #o>0 then --if O[posible_operator] -> C SuS SuS enabled operator (or something else) found and must be parced
-                                    for k,v in pairs(S.O)do b=v(C,a,b)or b end -- for all located operators: Lua and C SuS SuS
+                                    b=C.C(a,b,i)or b -- CORE module call
                                     if 7>#type(b)then --type<7 -> string; >7 - function | these can't be any othere values
                                         R[#R+1]=b --string located
                                         o=o:sub(i+1)
@@ -167,8 +134,8 @@ L=function(x,name,mode,env)
                         end
                         --WORD
                         if #w>0 then
-                            for k,v in pairs(S.W)do w=v(C,w,i)or w end --word/string parcers/overriders
-                            R[#R+1]=w --insert word
+                            w=C.C(nil,w,i)or w --CORE module call
+                            R[#R+1]=w
                         end
                     end
                 end 
@@ -191,12 +158,16 @@ end
 --COMPILLER EXTENSIONS:load other features of compiler using compiler ITSELF (can be used as example of C SuS SuS programming)
 a,b=L([[<K,E,F,dbg>
 F.K[';']=C,o,w=> -- any ";" that stand near ";,)]" or "\n" will be replaced by " end " for ex ";;" equal to " end  end "
-    @e,a,p=K[7],o:match"(;*) *([%S\n]?)%s*"
-    print(#p)
-    C.R[#C.R+1]=(#p>0&&p~="("||#a>1)&&e:rep(#a)||";"
+    @a,p=o:match"(;*) *([%S\n]?)%s*"
+    /|#p>0&&p~="("||#a>1?
+        for i=1,#a do
+        C.R[#C.R+1]=K[7]
+        /|C.L?C.C.L();
+                  end
+    \|C.R[#C.R+1]=";";
     $o:sub(#a+1);
 --OBJ function
-OBJ=o->o:match"%S+";
+OBJ=o->o:match"%S+"||"";
 
 --Environmet table
 env={}
@@ -210,7 +181,7 @@ err=C,s=>C.err=C.err||"SuS["..C.l.."]:"..s;
 
 F.err={C=>
     C.F.err=C=>
-        /|C.err?$ nil,control_table.err;;;}
+        /|C.err?$ nil,C.err;;;}
 
 --Preload feature
 F.pre={C,V,x,n,m,e=>
@@ -230,7 +201,8 @@ F.dbg={C,V=>-- V - argument
 
 --0b0000000 and 0o0000.000 number format support (avaliable exponenta: E+-x)
 F.b={C=>--return function that will be inserted in special extensions table
-    C.S.W.b=C,w=>
+    F.c[1](C)
+    C.C.W.b=C,w=>
         @a,b,c,r,t=w:match"^0([bo])(%d*)([eE]?.*)" --RUSH EEEEEEEEEEEEE for exponenta
         /|C.b&&C.R[#C.R]=="."?t,b,c=C.b,w:match"(%d+)([eE]?.*)"--b located! posible floating point!
         \|C.b=nil;
@@ -243,43 +215,64 @@ F.b={C=>--return function that will be inserted in special extensions table
           r=C.b&&tostring(r/t^#b):sub(3)||r--this is a floating point! recalculate required!
           C.b=!C.b&&#c<1&&t||nil--floating point support
           $r..c;;;}
-         
--- leveling function initialiser (breakets counter)
-F.l={C=>
-    /|C.O["("]?$;--if C.O["("] exist - leveling system already initialized, skip proccess (line 22)
-    C.L={{p={l=0}},b={{},[0]={}},a={{},[0]={}}}-- 1 - open "({["; 0 - close "]})"
-    @l=C.L
-    @p="([{}])"
-    for k in p:gfind"(.)"do
-        C.O[k]=C,o,w=>
-            o=o:sub(1,1)
-            @t=p:find(o,1,1)<4&&1||0
-            for k,v in pairs(l.b[t])do v(C,o,w)end
-            C.R[#C.R+1]=o
-            l[#l+t]=t>0&&{}||nil
-            for k,v in pairs(l.a[t])do v(C,o,w)end;
-                        end;}            -- This code is hard to understand because
-                                        -- it was sponsored by Peppino Spagetti from Pizza Tower PC game
---start searcher initialiser
-F.s={C=>
-    --init leveling function
-    F.l[1](C)
+
+--ATP: Attempt to perform
+ATP=C,wt,on=>err(C,"Attempt to perform '"..wt.."' on '"..on.."'!");
+--new parcer core for C SuS SuS 3.5
+F.c={C=>
+    /|C.CR?$;
+    C.CR=1--mark & skip
+    C.L={{st=1},o={},c={}}--leveling table [o -> on lvl open, c -> on lvl close]
     @l=C.L
     @r=C.R
-    /|l[1].st?$; -- Searcher was inited before! Skip! VVV!DEBUG!VVV
-    l.b[1][#l.b[1]+1]=C=>/|Kb[r[#r]:match"%w*"]||!r[#r]:find"[%w_%}%]%)\"']"?l[#l].st=#r+1;;--on level open
-    l.a[1][#l.a[1]+1]=C=>l[#l].st=#r+1;--after level open
-    l[1].st=1--first start of object is start of file (it must be set to avoid errors)
-    C.S.W.st=C,w,i=>-- Cow says "MOOO"; F.s says "start of object is here *table index*"
-        @p=r[#r]
-        --check previous value for opts that continue the object " . : " 
-        /|p:match"^[.:]"&&!p:match"%.%."?$;--exit
-        --if current value is a string
-        @ch=p:match"^ ?[%w_%]%)}\"']+"||""
-        /|w:find"^[%['\"].-[%]'\"]"&&!Kb[ch]&&!(" and or not "):find(" "..ch.." ")?$;--previous value was a breaket or word (func"" "shortcut call") or string (func()""[]{}"" multy shortcall) (operators skip)
-        --start of object found
-        l[#l].st=#r+1;;}--set word as start
-
+    --add uncatched operators
+    for k in("=~<>"):gfind"."do k=k..'='C.O[k]=k end
+    --EVENT invocator
+    @f=T,o,w,i=>for k,v in pairs(T)do w=v(o,w,i)or w end $w;
+    
+    --CORE table
+    C.C={W={},O={},A={},K={},o={['and']=1,['or']=1,['not']=1},
+    --LEVELING controller
+        L=v,o=>/|v?l[#l+1]=f(l.o,o,{})     -- level+
+               \|f(l.c,o,l[#l])l[#l]=nil;;}-- level-
+    @c=C.C
+    @p="([{}])"
+    for k in p:gfind"(.)"do --for breakets {}
+        @t=p:find(k,1,1)<4
+        C.O[k]=C=>
+            r[#r+1]=k--insert breaket
+            c.L(t,k);
+                        end    
+    @cv -- current_value -- 1 - keyword 2 - operator 3 - word/string/number
+    --CORE function
+    setmetatable(C.C,{__call=S,o,w,i=>
+        /|o=='"'||o=='\0'?$;--skip string markers and comments
+        C.pv=C.cv -- set previous value
+        C.cv=nil
+        /|#type(w)==6?
+            @k=Kb[OBJ(w)]--get keyword id if keyword
+            /|k?C.cv=1 w=f(c.K,o,w,i)||w--KEYWORD
+                /|k==8||k==12||k==13||k==1?c.L(1)--function if do repeat | this will be used for better error detection and goto ::label:: realisation
+                :|k==7||k==14?c.L();--end until
+            :|c.o[OBJ(w)]? C.cv=2 w=f(c.O,o,w,i)||w;;--OPERATOR (and or not)
+        /|!C.cv?
+            /|!o?C.cv=w:find"^['\"%[]"&&5||3 w=f(c.W,o,w,i)||w --WORD(3)     STRING(5)
+            \|C.cv=o:find"^[%[%]%(%){}]"&&4||2 w=f(c.O,o,w,i)||w;;       --OPERATOR(2) BREAKET(4)
+        w=f(c.A,o,w,i)||w--ALL
+        $w;})
+    
+    --START SEARCHER
+    --@lb=->OBJ(r[#r]):find"^ ?[%]%)}\"']";
+    l.o[#l.o+1]=o,t=>--on level open
+        @s=#r+(o&&0||1)--word or breaket if o exist -> it's a breaket
+        /|C.pv<3?l[#l].st=s;--previous level
+        t.st=s+1;--next level table
+    c.W.st=o,w=>
+        @p=OBJ(r[#r])
+        /|p:find"[.:]"&&#p<2?$;--default start searcher allowed operators
+        /|C.cv==5&&C.pv>2?$;--current word is string and previous word was an operator or keyword
+        l[#l].st=#r+1;
+    ;}
 -- nil forgiving function initialiser
 do
 @c,d=setmetatable--nil returning object | nilF feature: nil forgiving operators | d -> default c-> colon
@@ -287,38 +280,37 @@ d=c({},{__call=->nil;,__index=->nil;})
 c=c({},{__index=->()->nil;;})
 
 N=(o,i)=>-- o -> object, i -> index
-    /|o==nil?$i&&c||d;--> obj not exist (false and other variables are allowed
+    /|o==nil?$i&&c||d;--> obj not exist (false and other variables are allowed)
     /|i?$o[i]&&o||c;--> obj and index exist -> colon mode
     $o;-- obj exist but not index
-end
 
--- Not null check feature! Must be loaded after E for E support
 F.N={C=>
-    F.s[1](C)--load start searcher!
-    @p=C.O["?"]--if E feature was enabled
-    @r=C.R
-    @f=C,b=>/|r[C.pc]==r[#r]?table.insert(r,C.ci,",'"..r[#r].."'");--function to insert index if index have a call after it
-            C.pc,C.L.b[1].pc,C.S.W.str=nil;
-
-    @e="Attempt to perform '"
-    C.O["?"]=C,o,w=>
-        @a=o:match'.([.:%[%({"]?)'
-        /|!r[#r]:find"^ ?[%w_%]%)}\"']%s-"?err(C,e.."?"..(a||"").."' on '"..(OBJ(r[#r])or"nil").."'");--if previous value was an operator
-        /|#a>0?
-            /|a:find"[.:]"&&!o:sub(3):find"^[\0%s]*$"?err(C,e..o:sub(3).."' on '?"..a.."'");--error if ?[.:] has operators but not word after it 
-            table.insert(r,C.L[#C.L].st," cssc.nilF(")--Insert a breaket at the start of object!
-            r[#r+1]=a==":"&&",'"..w.."')"||")"--Call required! Insert an 'index'!
-            /|a=="."?-- Index detected, and call check required!
-                C.ci=#r--save index of cell (call_index) to insert if it needed
-                C.pc=#r+2--save index of word (posible_call)
-                C.S.W.str=C,w=>/|w:find"^[%w_]"?$;
-                               f(C);--for string shortcalls
-                C.L.b[1].pc=f;--Call required! Insert an 'index'!
-        \|r[#r+1]=p&&" "..p.." "||"?";;;}--if a was nil or not [.:] return if then else shortcut (if it not enabled -> let lua parce '?' as an error)
+    F.c[1](C)
+    C.C.O.N=o=>/|F.N[o]?C.cv=C.pv;;;}--mark F.N operators as start searcher allowed (core-invisible)
+for v,k in('.:"({'):gfind"()(.)"do
+    F.N['?'..k]=C,o,w=>
+        @r=C.R
+        /|#r<2||C.pv<3?ATP(C,k,r[#r]);--previous value was a keyword or
+        /|o:sub(3):find"[^\0%s]"?ATP(C,OBJ(o:sub(3)),k);
+        table.insert(C.R,C.L[#C.L].st," cssc.nilF(")--first part
+        r[#r+1]=v==2&&",'"..w.."')"||')'
+        /|v==1?--no error and index detected
+            C.ci=#r--index of ? 
+            C.pc=#r+2-- index of word
+            C.C.A.str=o=>
+                /|C.pc<=#r? print(C.cv,w,r[#r],r[#r-1],r[#r-2],#r,o)
+                    /|C.cv>4||C.cv>3&&!o:find'^[)%]}]'?
+                        table.insert(r,C.ci,",'"..w.."'");
+                    C.C.A.str=nil;;;
+        $o:sub(2);
+                               end
+end
 
 --Add initialiser function to F.K feature to enable support of &&= and ||= 
 F.K[1]=C=>C.EQ={"&&","||",unpack(C.EQ||{})};
 
+
+--REWORK IN PROGRESS
 -- X= operators feature
 --WARNING! This feature has only partual support of C++ X= operator
 --It has default lua priority, not C++:
@@ -327,7 +319,7 @@ F.K[1]=C=>C.EQ={"&&","||",unpack(C.EQ||{})};
 --C++      : a*=4+5 --> a=a*(4+5)
 --Current solution: for full priority mimicry -> place sequence into breakets like in examle.
 F.C={C=>
-    F.s[1](C)--load start searcher
+    F.c[1](C)--load start searcher
     
     --EQ - table with operators that support *op*= behaviour
     C.EQ={"+","-","*","%","/","..","^",unpack(C.EQ||{})}
@@ -336,7 +328,7 @@ F.C={C=>
     --operator main parce function
     --TODO insert end searcher feature for ?= operator support in C SuS SuS future versions... (this feature will apear only after function leveling realisation)
     @op=C,o,w=>
-        o=o:match"(.-)="--for this we need only the first part of operator
+        o=o:sub(1,-2)--for this we need only the first part of operator
         r[#r+1]="="--insert equality
         l[#l].m={bor=#r+1} --Lua5.3 feature support
         for i=l[#l].st,#r-1 do r[#r+1]=r[i]end --copy variable from the start of an object
@@ -363,9 +355,10 @@ F.C={C=>
               end $false;}
 env.typeof=tof--include typeof into CSSC environment
 F.IS={C=>
-    F.s[1](C)
+    F.c[1](C)
+    C.C.o['is']=1
     @l=C.L
-    C.S.W[1]=C,w=>
+    C.C.W[1]=C,w=>
         w=OBJ(w)
         /|w=='is'?
             table.insert(C.R,l[#l].st,"setmetatable({")
@@ -382,7 +375,7 @@ B.idiv=a,b->math.floor(a/b);
 B.shl=B.lshift
 B.shr=B.rshift
 @bt={shl='<<',shr='>>',bxor='~',bor='|',band='&',idiv='//'}
-@kp={}('and or , = ; > < >= <= ~= == => -> '):gsub("%S+",(x)=>kp[x]=1;)
+@kp={}('and or , = ; > < >= <= ~= == => -> '):gsub("%S+",(x)=>kp[x]=1;) -- all operators that has lower priority than bitise operators
 @f=t,m->"Attempt to perform "..t.." bitwise operation on a "..m.." value";
 M={bnot=setmetatable({},{
     __pow=a,b=>
@@ -406,27 +399,26 @@ for k,v in pairs(bt)do
     M[k]=v=='//'&&{__div=f}||{__concat=f}
                    end
 F.M={C=>
-    --by default compiller not reacts to this operators, required to add for priority support
-    --(">= <= ~= =="):gsub("%S+",(x)=>C.O[x]=x;)
-    C.O['~=']='~=' --to avoid errors
-    --require"cc.pretty".pretty_print(C.EQ)
-    C.EQ={">>","<<","&","|",unpack(C.EQ||{})}
-    F.s[1](C)
+    C.EQ={">>","<<","&","|",unpack(C.EQ||{})}--additional equality
+    F.c[1](C)--enable core
     @l=C.L
     @r=C.R
     l[#l].m={bor=1}
-    l.a[1][#l.a[1]+1]=C=>l[#l].m={bor=#r+1};
+    --on level open
+    l.o[#l.o+1]=o,t=>t.m={bor=#r+1};
+    
     --function to correct priority of sequence (set on O and on W)
+    --C.C.A.pc=o,w
     @f=C,o=>
         o=OBJ(o)
         @i=#r+2
         @b=Kb[o]||kp[o]
-        /|b?l[#l].m={bor=i}; 
+        /|b?l[#l].m={bor=i};
         /|b||(" .. + -"):find(' '..o..' ',1,1)?l[#l].m.idiv=i;;--start of sequence and reset!
-    C.S.O.pc=C,a,b=>
+    C.C.O.pc=a,b=>
         /|type(b)==6?f(C,b)--replacement
         \|f(C,a);;--base
-    C.S.W.pc=f 
+    C.C.W.pc=f 
     for k,v in pairs(bt)do
         C.O[v]=C,o,w=>
             @p=OBJ(r[#r])-- grep the value, skip the comments

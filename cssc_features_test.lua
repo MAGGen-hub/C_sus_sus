@@ -14,6 +14,7 @@ t={
     --call test
     local a = print
     a?("this will be printed...")
+    --a?.b?.c()
     a=nil
     
     a--[[hello! I am a little trouble maker commentary]]?("This will be skipped...")
@@ -23,7 +24,8 @@ t={
     
     --MULTY (short/full/index)call
     local b = nil --can be false
-    local p = b?"B equal nil, this will not be printed"?"and this too"?("and this",1)?.ind("and this")?"and this"?[[again]]
+    local p = b?"B equal nil, this will not be printed"?"and this too"
+    ?("and this",1)?.ind("and this")?"and this"?[[again]]
     print("p is nil:",p)
 ]==]},
 {"N feature test N\xB02",[==[<N,dbg(p)>

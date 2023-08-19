@@ -2,7 +2,7 @@
 K={}
 Ks="if then elseif else local return end function for while in do repeat until break "
 Kb={}
-Ks:gsub("(%S+)( )",function(x,s)K[#K+1]=s..x..s Kb[x]=#K end)
+Ks:gsub("(%S+)( )",function(x,s)K[#K+1]=s..x..s end)
 local l=function(C,o)
 local i,a,e,p=#C.R,1
 e=C.R[i]
@@ -12,7 +12,6 @@ i,a=i-1,not a
 e=C.R[i] end
 table.insert(C.R,#p<1 and i or i+1,K[8]..p)
 C.R[#C.R+1]=(#p>0 and")"or"")..(o:sub(1,1)=="-"and K[6]or"")
-if C.L then C.C.L(1)end
 end
 F={
 E={ ["/|"]=K[1],
@@ -24,7 +23,10 @@ K={ ["@"]=K[5],
 ["||"]=" or ",
 ["&&"]=" and ",
 ["!"]=" not ",
-[";"]=K[7]},
+[";"]=function(C,o,w)
+local e,a,p,k=K[7],o:match"(;*) *([%S\n]?)%s*([%(\"]?)"
+C.R[#C.R+1]=(#p>0 and (#k<1 or p~="\n") or#a>1)and e:rep(#a)or";"
+return o:sub(#a+1)end},
 F={ ["->"]=l,
 ["=>"]=l}
 }
@@ -33,9 +35,9 @@ L=function(x,name,mode,env)
 if type(x)=="string" then
 local c=x:match"^<.->"or x:match"^#!.-\n?<.->"
 if c then
-local po,R,O,C,s,t,a,b,l,e="",{""},{['"']="",["\0"]="\n",['..']='..',['...']='...'}
+local po,R,S,O,C,s,t,a,b,l,e="",{""},{W={},O={}},{['"']="",["\0"]="\n",['..']='..',['...']='...'}
 x=x:sub(#c+1)
-C={O=O,C=function()end,R=R,F={},c={},l=1,pv=1}
+C={O=O,S=S,R=R,F={},c={},l=1,pv=1}
 for K,V in ("D"..c):gmatch"([%w_]+)%(?([%w_. ]*)"do
 if F[K]then
 for k,v in pairs(F[K])do O[k]=v end
@@ -54,7 +56,7 @@ b=b or i
 t=t..o:sub(0,b)
 if c then c=C.c
 else
-t=C.C(nil,t,i)or t
+for k,v in pairs(S.W)do t=v(C,t,i)or t end
 c=R
 end
 c[#c+1]=t
@@ -84,7 +86,7 @@ for i=3,1,-1 do
 a=o:sub(1,i)
 b=O[a] or i<2 and a
 if b and #o>0 then
-b=C.C(a,b,i)or b
+for k,v in pairs(S.O)do b=v(C,a,b)or b end
 if 7>#type(b)then
 R[#R+1]=b
 o=o:sub(i+1)
@@ -97,7 +99,7 @@ end
 end
 end
 if #w>0 then
-w=C.C(nil,w,i)or w
+for k,v in pairs(S.W)do w=v(C,w,i)or w end
 R[#R+1]=w
 end
 end
@@ -116,23 +118,14 @@ end
 return NL(x,name,mode,env)
 end
 a,b=L([[<K,E,F>
-F.K[';']=C,o,w=>
-@a,p=o:match"(;*) *([%S\n]?)%s*"
-/|#p>0&&p~="("||#a>1?
-for i=1,#a do
-C.R[#C.R+1]=K[7]
-/|C.L?C.C.L();
-end
-\|C.R[#C.R+1]=";";
-$o:sub(#a+1);
-OBJ=o->o:match"%S+"||"";
+OBJ=o->o:match"%S+";
 env={}
 F.D={["\0"]=C=>@r=C.R r[#r]=r[#r].." "..(table.remove(C.c,1)||"");,
 ['"']=C=>$nil;}
 err=C,s=>C.err=C.err||"SuS["..C.l.."]:"..s;
 F.err={C=>
 C.F.err=C=>
-/|C.err?$ nil,C.err;;;}
+/|C.err?$ nil,control_table.err;;;}
 F.pre={C,V,x,n,m,e=>
 /|!cssc.preload?cssc.preload={};
 @P=cssc.preload
@@ -146,7 +139,7 @@ C.F.dbg=C,x,n,m=>
 /|m=="c"?$R
 :|m=="s"?$table.concat(C.R);;;}
 F.b={C=>
-C.C.W.b=C,w=>
+C.S.W.b=C,w=>
 @a,b,c,r,t=w:match"^0([bo])(%d*)([eE]?.*)"
 /|C.b&&C.R[#C.R]=="."?t,b,c=C.b,w:match"(%d+)([eE]?.*)"
 \|C.b=nil;
@@ -159,52 +152,34 @@ end
 r=C.b&&tostring(r/t^#b):sub(3)||r
 C.b=!C.b&&#c<1&&t||nil
 $r..c;;;}
-ATP=C,wt,on=>err(C,"Attempt to perform '"..wt.."' on '"..on.."'!");
-F.c={C=>
-/|C.CR?$;
-C.CR=1
-C.L={{st=1},o={},c={}}
+F.l={C=>
+/|C.O["("]?$;
+C.L={{p={l=0}},b={{},[0]={}},a={{},[0]={}}}
 @l=C.L
-@r=C.R
-for k in("=~<>"):gfind"."do k=k..'='C.O[k]=k end
-@f=T,o,w,i=>for k,v in pairs(T)do w=v(o,w,i)or w end $w;
-C.C={W={},O={},A={},K={},o={['and']=1,['or']=1,['not']=1},
-L=v,o=>/|v?l[#l+1]=f(l.o,o,{})
-\|f(l.c,o,l[#l])l[#l]=nil;;}
-@c=C.C
 @p="([{}])"
 for k in p:gfind"(.)"do
-@t=p:find(k,1,1)<4
-C.O[k]=C=>
-r[#r+1]=k
-c.L(t,k);
-end
-@cv
-setmetatable(C.C,{__call=S,o,w,i=>
-/|o=='"'?$;
-C.pv=C.cv
-C.cv=nil
-/|#type(w)==6?
-@k=Kb[OBJ(w)]
-/|k?C.cv=1 w=f(c.K,o,w,i)||w
-/|k==8||k==12||k==13||k==1?c.L(1)
-:|k==7||k==14?c.L();
-:|c.o[OBJ(w)]? C.cv=2 w=f(c.O,o,w,i)||w;;
-/|!C.cv?
-/|!o?C.cv=w:find"^['\"%[]"&&5||3 w=f(c.W,o,w,i)||w
-\|C.cv=o:find"^[%[%]%(%){}]"&&4||2 w=f(c.O,o,w,i)||w;;
-w=f(c.A,o,w,i)||w
-$w;})
-l.o[#l.o+1]=o,t=>
-@s=#r+(o&&0||1)
-/|C.pv<3?l[#l].st=s;
-t.st=s+1;
-c.W.st=o,w=>
-@p=OBJ(r[#r])
-/|p:find"[.:]"&&#p<2?$;
-/|C.cv==5&&C.pv>2?$;
-l[#l].st=#r+1;
-;}
+C.O[k]=C,o,w=>
+o=o:sub(1,1)
+@t=p:find(o,1,1)<4&&1||0
+for k,v in pairs(l.b[t])do v(C,o,w)end
+C.R[#C.R+1]=o
+l[#l+t]=t>0&&{}||nil
+for k,v in pairs(l.a[t])do v(C,o,w)end;
+end;}
+F.s={C=>
+F.l[1](C)
+@l=C.L
+@r=C.R
+/|l[1].st?$;
+l.b[1][#l.b[1]+1]=C=>/|Kb[r[#r]:match"%w*"]||!r[#r]:find"[%w_%}%]%)\"']"?l[#l].st=#r+1;;
+l.a[1][#l.a[1]+1]=C=>l[#l].st=#r+1;
+l[1].st=1
+C.S.W.st=C,w,i=>
+@p=r[#r]
+/|p:match"^[.:]"&&!p:match"%.%."?$;
+@ch=p:match"^ ?[%w_%]%)}\"']+"||""
+/|w:find"^[%['\"].-[%]'\"]"&&!Kb[ch]&&!(" and or not "):find(" "..ch.." ")?$;
+l[#l].st=#r+1;;}
 do
 @c,d=setmetatable
 d=c({},{__call=->nil;,__index=->nil;})
@@ -213,30 +188,31 @@ N=(o,i)=>
 /|o==nil?$i&&c||d;
 /|i?$o[i]&&o||c;
 $o;
+end
 F.N={C=>
-F.c[1](C)
-C.C.O.N=o=>/|F.N[o]?C.cv=C.pv;;;}
-for v,k in('.:"({'):gfind"()(.)"do
-F.N['?'..k]=C,o,w=>
+F.s[1](C)
+@p=C.O["?"]
 @r=C.R
-/|#r<2||C.pv<3?ATP(C,k,r[#r]);
-/|o:sub(3):find"[^\0%s]"?ATP(C,OBJ(o:sub(3)),k);
-table.insert(C.R,C.L[#C.L].st," cssc.nilF(")
-r[#r+1]=v==2&&",'"..w.."')"||')'
-/|v==1?
+@f=C,b=>/|r[C.pc]==r[#r]?table.insert(r,C.ci,",'"..r[#r].."'");
+C.pc,C.L.b[1].pc,C.S.W.str=nil;
+@e="Attempt to perform '"
+C.O["?"]=C,o,w=>
+@a=o:match'.([.:%[%({"]?)'
+/|!r[#r]:find"^ ?[%w_%]%)}\"']%s-"?err(C,e.."?"..(a||"").."' on '"..(OBJ(r[#r])or"nil").."'");
+/|#a>0?
+/|a:find"[.:]"&&!o:sub(3):find"^[\0%s]*$"?err(C,e..o:sub(3).."' on '?"..a.."'");
+table.insert(r,C.L[#C.L].st," cssc.nilF(")
+r[#r+1]=a==":"&&",'"..w.."')"||")"
+/|a=="."?
 C.ci=#r
 C.pc=#r+2
-C.C.A.str=o=>
-/|C.pc<=#r? print(C.cv,w,r[#r],r[#r-1],r[#r-2],#r,o)
-/|C.cv>4||C.cv>3&&!o:find'^[)%]}]'?
-table.insert(r,C.ci,",'"..w.."'");
-C.C.A.str=nil;;;
-$o:sub(2);
-end
-end
+C.S.W.str=C,w=>/|w:find"^[%w_]"?$;
+f(C);
+C.L.b[1].pc=f;
+\|r[#r+1]=p&&" "..p.." "||"?";;;}
 F.K[1]=C=>C.EQ={"&&","||",unpack(C.EQ||{})};
 F.C={C=>
-F.c[1](C)
+F.s[1](C)
 C.EQ={"+","-","*","%","/","..","^",unpack(C.EQ||{})}
 @l=C.L
 @r=C.R
@@ -253,7 +229,7 @@ l[#l].m={bor=#r+1};
 for i=1,#C.EQ do C.O[C.EQ[i].."=" ]=op end;
 }
 @tof=o->(getmetatable(o)||{}).__type||type(o);
-@is={__concat=v,...=>
+@is={__call=v,...=>
 @a={...}
 /|#a<1?$false;
 /|#type(a[1])==5?a=a[1];
@@ -262,13 +238,13 @@ for i=1,#a do
 end $false;}
 env.typeof=tof
 F.IS={C=>
-F.c[1](C)
+F.s[1](C)
 @l=C.L
-C.C.W[1]=C,w=>
+C.S.W[1]=C,w=>
 w=OBJ(w)
 /|w=='is'?
 table.insert(C.R,l[#l].st,"setmetatable({")
-$"},cssc.is)..";;;}
+$"},cssc.is)";;;}
 do
 @B={}
 for k,v in pairs(bit32)do B[k]=v end
@@ -301,21 +277,21 @@ end
 F.M={C=>
 C.O['~=']='~='
 C.EQ={">>","<<","&","|",unpack(C.EQ||{})}
-F.c[1](C)
+F.s[1](C)
 @l=C.L
 @r=C.R
 l[#l].m={bor=1}
-l.o[#l.o+1]=o,t=>t.m={bor=#r+1};
+l.a[1][#l.a[1]+1]=C=>l[#l].m={bor=#r+1};
 @f=C,o=>
 o=OBJ(o)
 @i=#r+2
 @b=Kb[o]||kp[o]
 /|b?l[#l].m={bor=i};
 /|b||(" .. + -"):find(' '..o..' ',1,1)?l[#l].m.idiv=i;;
-C.C.O.pc=a,b=>
+C.S.O.pc=C,a,b=>
 /|type(b)==6?f(C,b)
 \|f(C,a);;
-C.C.W.pc=f
+C.S.W.pc=f
 for k,v in pairs(bt)do
 C.O[v]=C,o,w=>
 @p=OBJ(r[#r])
