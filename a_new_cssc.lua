@@ -346,23 +346,21 @@ F.C={C=>
 --EXAMPLE: first_arg is "second_arg", first_arg is {"second_arg","third_arg"}, first_arg is (second_arg)
 --This: (first_arg is second_arg) will emit an error!
 @tof=o->(getmetatable(o)||{}).__type||type(o);
-@is={__concat=v,...=>
-    @a={...}
-    /|#a<1?$false;
-    /|#type(a[1])==5?a=a[1];
-    for i=1,#a do
-        /|tof(v[1])==a[i]?$true;
-              end $false;}
+@is=setmetatable({},{__concat=v,a=>$setmetatable({a},--is inited
+        {__concat=v,a=> --a args v value
+        /|type(a[1])=="table"?a=a[1];
+        for i=1,#a do
+            /|tof(v[1])==a[i]?$true;
+                  end $false;});})
 env.typeof=tof--include typeof into CSSC environment
 F.IS={C=>
     F.c[1](C)
     C.C.o['is']=1
     @l=C.L
-    C.C.W[1]=C,w=>
+    C.C.O[1]=C,w=>
         w=OBJ(w)
         /|w=='is'?
-            table.insert(C.R,l[#l].st,"setmetatable({")
-            $"},cssc.is)..";;;}
+            $"..cssc.is..";;;}
 
 --Lua5.3 operators feature! Bitwise and idiv operators support!
 --WARNING! This feature has no support of `function()end` constructors! (At last for now)
@@ -406,19 +404,12 @@ F.M={C=>
     l[#l].m={bor=1}
     --on level open
     l.o[#l.o+1]=o,t=>t.m={bor=#r+1};
-    
     --function to correct priority of sequence (set on O and on W)
-    --C.C.A.pc=o,w
-    @f=C,o=>
-        o=OBJ(o)
+    C.C.A.pc=o,w=>
         @i=#r+2
-        @b=Kb[o]||kp[o]
-        /|b?l[#l].m={bor=i};
-        /|b||(" .. + -"):find(' '..o..' ',1,1)?l[#l].m.idiv=i;;--start of sequence and reset!
-    C.C.O.pc=a,b=>
-        /|type(b)==6?f(C,b)--replacement
-        \|f(C,a);;--base
-    C.C.W.pc=f 
+        @b=C.cv<2||o&&kp[o]--current value is equal to keyword or operator and has lower priority than bitwises
+        /|b?l[#l].m={bor=i};--reset the starter table
+        /|b||o&&(" .. + -"):find(' '..o..' ',1,1)?l[#l].m.idiv=i;;--start of sequence and reset!
     for k,v in pairs(bt)do
         C.O[v]=C,o,w=>
             @p=OBJ(r[#r])-- grep the value, skip the comments

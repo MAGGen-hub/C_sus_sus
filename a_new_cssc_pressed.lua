@@ -146,6 +146,7 @@ C.F.dbg=C,x,n,m=>
 /|m=="c"?$R
 :|m=="s"?$table.concat(C.R);;;}
 F.b={C=>
+F.c[1](C)
 C.C.W.b=C,w=>
 @a,b,c,r,t=w:match"^0([bo])(%d*)([eE]?.*)"
 /|C.b&&C.R[#C.R]=="."?t,b,c=C.b,w:match"(%d+)([eE]?.*)"
@@ -181,7 +182,7 @@ c.L(t,k);
 end
 @cv
 setmetatable(C.C,{__call=S,o,w,i=>
-/|o=='"'?$;
+/|o=='"'||o=='\0'?$;
 C.pv=C.cv
 C.cv=nil
 /|#type(w)==6?
@@ -241,7 +242,7 @@ C.EQ={"+","-","*","%","/","..","^",unpack(C.EQ||{})}
 @l=C.L
 @r=C.R
 @op=C,o,w=>
-o=o:match"(.-)="
+o=o:sub(1,-2)
 r[#r+1]="="
 l[#l].m={bor=#r+1}
 for i=l[#l].st,#r-1 do r[#r+1]=r[i]end
@@ -263,8 +264,9 @@ end $false;}
 env.typeof=tof
 F.IS={C=>
 F.c[1](C)
+C.C.o['is']=1
 @l=C.L
-C.C.W[1]=C,w=>
+C.C.O[1]=C,w=>
 w=OBJ(w)
 /|w=='is'?
 table.insert(C.R,l[#l].st,"setmetatable({")
@@ -299,23 +301,17 @@ $B[k](a[1],b);
 M[k]=v=='//'&&{__div=f}||{__concat=f}
 end
 F.M={C=>
-C.O['~=']='~='
 C.EQ={">>","<<","&","|",unpack(C.EQ||{})}
 F.c[1](C)
 @l=C.L
 @r=C.R
 l[#l].m={bor=1}
 l.o[#l.o+1]=o,t=>t.m={bor=#r+1};
-@f=C,o=>
-o=OBJ(o)
+C.C.A.pc=o,w=>
 @i=#r+2
-@b=Kb[o]||kp[o]
+@b=C.cv<2||o&&kp[o]
 /|b?l[#l].m={bor=i};
-/|b||(" .. + -"):find(' '..o..' ',1,1)?l[#l].m.idiv=i;;
-C.C.O.pc=a,b=>
-/|type(b)==6?f(C,b)
-\|f(C,a);;
-C.C.W.pc=f
+/|b||o&&(" .. + -"):find(' '..o..' ',1,1)?l[#l].m.idiv=i;;
 for k,v in pairs(bt)do
 C.O[v]=C,o,w=>
 @p=OBJ(r[#r])
