@@ -3,7 +3,7 @@
 --CODE START
 --this section contain all lua keywords for specific features
 K={}
-Ks="if then elseif else local return end function for while in do repeat until break "
+Ks="if elseif else function for while repeat do then end until local return in break "
 Kb={}
 Ks:gsub("(%S+)( )",function(x,s)K[#K+1]=s..x..s Kb[x]=#K end)
 --initialize lambda function feature
@@ -14,9 +14,9 @@ local l=function(C,o) --DO NOT PLACE LAMBDA AT THE START OF FILE!!! You will got
     while i>0 and(#p>0 and(a and(e:match"[%w_]+"or"..."==e)or","==e)or#p<1 and not e:find"^%(%s*")do --comma or word or ( if ) located
         i,a=i-1,not a
         e=C.R[i] end
-    table.insert(C.R,#p<1 and i or i+1,K[8]..p)-- K[8] - function keyword K[6] - return
-    C.R[#C.R+1]=(#p>0 and")"or"")..(o:sub(1,1)=="-"and K[6]or"") --WARNING!!! Thanks for your attention! =)
-    if C.L then C.C.L(1)end
+    table.insert(C.R,#p<1 and i or i+1,K[4]..p)-- K[4] - function keyword K[13] - return
+    C.R[#C.R+1]=(#p>0 and")"or"")..(o:sub(1,1)=="-"and K[13]or"") --WARNING!!! Thanks for your attention! =)
+    if C.L then C.C.L("function",1)end
 end
 
 --FEATURES TABLE
@@ -25,15 +25,15 @@ F={
 
 -- keywords and "if else then" shortcut section
 E={ ["/|"]=K[1],--if
-    ["?"]=K[2],--then
-    [":|"]=K[3],--elseif
-    ["\\|"]=K[4]},--else
-K={ ["@"]=K[5],--local
-    ["$"]=K[6],--return
+    ["?"]=K[9],--then
+    [":|"]=K[2],--elseif
+    ["\\|"]=K[3]},--else
+K={ ["@"]=K[12],--local
+    ["$"]=K[13],--return
     ["||"]=" or ",--or
     ["&&"]=" and ",--and
     ["!"]=" not ",--not
-    [";"]=K[7]},
+    [";"]=K[10]},--end
 
 --lambda section
 F={ ["->"]=l,
@@ -156,18 +156,18 @@ L=function(x,name,mode,env)
 end
 
 --COMPILLER EXTENSIONS:load other features of compiler using compiler ITSELF (can be used as example of C SuS SuS programming)
-a,b=L([[<K,E,F,dbg>
+a,b=L([=[<K,E,F,dbg>
 F.K[';']=C,o,w=> -- any ";" that stand near ";,)]" or "\n" will be replaced by " end " for ex ";;" equal to " end  end "
     @a,p=o:match"(;*) *([%S\n]?)%s*"
     /|#p>0&&p~="("||#a>1?
         for i=1,#a do
-        C.R[#C.R+1]=K[7]
-        /|C.L?C.C.L();
+        C.R[#C.R+1]=K[10]
+        /|C.L?C.C.L("end");--K[10]="end"
                   end
     \|C.R[#C.R+1]=";";
     $o:sub(#a+1);
 --OBJ function
-OBJ=o->o:match"%S+"||"";
+OBJ=o=>$type(o)=='string'&&o:match"%S+"||"";
 
 --Environmet table
 env={}
@@ -202,7 +202,7 @@ F.dbg={C,V=>-- V - argument
 --0b0000000 and 0o0000.000 number format support (avaliable exponenta: E+-x)
 F.b={C=>--return function that will be inserted in special extensions table
     F.c[1](C)
-    C.C.W.b=C,w=>
+    C.C.W.b=o,w=>
         @a,b,c,r,t=w:match"^0([bo])(%d*)([eE]?.*)" --RUSH EEEEEEEEEEEEE for exponenta
         /|C.b&&C.R[#C.R]=="."?t,b,c=C.b,w:match"(%d+)([eE]?.*)"--b located! posible floating point!
         \|C.b=nil;
@@ -218,59 +218,62 @@ F.b={C=>--return function that will be inserted in special extensions table
 
 --ATP: Attempt to perform
 ATP=C,wt,on=>err(C,"Attempt to perform '"..wt.."' on '"..on.."'!");
---new parcer core for C SuS SuS 3.5
+--New parcer core for C SuS SuS 3.5
 F.c={C=>
     /|C.CR?$;
     C.CR=1--mark & skip
-    C.L={{st=1},o={},c={}}--leveling table [o -> on lvl open, c -> on lvl close]
+    C.L={{st=1,t="main"},o={},c={}}--leveling table [o -> on lvl open, c -> on lvl close]
     @l=C.L
     @r=C.R
     --add uncatched operators
     for k in("=~<>"):gfind"."do k=k..'='C.O[k]=k end
     --EVENT invocator
     @f=T,o,w,i=>for k,v in pairs(T)do w=v(o,w,i)or w end $w;
-    
     --CORE table
-    C.C={W={},O={},A={},K={},o={['and']=1,['or']=1,['not']=1},
+    C.C={W={},O={},A={},K={},o={['and']=1,['or']=1,['not']=1}, -- o for operators
     --LEVELING controller
-        L=v,o=>/|v?l[#l+1]=f(l.o,o,{})     -- level+
-               \|f(l.c,o,l[#l])l[#l]=nil;;}-- level-
+        l={["for"]="do",["while"]="do",["repeat"]="until",["if"]="then",["elseif"]="then",["else"]="end",["do"]="end",["function"]="end",["{"]="}",["("]=")",["["]="]"},--level ends table (then has no end because it can has multiple ones)
+        L=o,v=>/|v?l[#l+1]=f(l.o,o,{t=o})     -- level+
+               \|@e=C.C.l[l[#l].t]
+                 /|e&&e~=o?err(C,"Expected '"..e.."' after '"..l[#l].t.."' but got '"..o.."'!");--level error detection
+                 /|#l<2?err(C,"Unexpected '"..o.."'!");
+                 f(l.c,o,l[#l])l[#l]=#l<2&&l[#l]||nil;;}-- level-
     @c=C.C
-    @p="([{}])"
-    for k in p:gfind"(.)"do --for breakets {}
-        @t=p:find(k,1,1)<4
-        C.O[k]=C=>
-            r[#r+1]=k--insert breaket
-            c.L(t,k);
-                        end    
-    @cv -- current_value -- 1 - keyword 2 - operator 3 - word/string/number
+    C.F[1]==>/|#l>1?err(C,"Uncolsed construction! Missing '"..(c.l[l[#l].t]||"end").."'!");;
+    
     --CORE function
     setmetatable(C.C,{__call=S,o,w,i=>
         /|o=='"'||o=='\0'?$;--skip string markers and comments
         C.pv=C.cv -- set previous value
         C.cv=nil
         /|#type(w)==6?
-            @k=Kb[OBJ(w)]--get keyword id if keyword
+            @ow=OBJ(w)
+            @k=Kb[ow]--get keyword id if keyword
             /|k?C.cv=1 w=f(c.K,o,w,i)||w--KEYWORD
-                /|k==8||k==12||k==13||k==1?c.L(1)--function if do repeat | this will be used for better error detection and goto ::label:: realisation
-                :|k==7||k==14?c.L();--end until
-            :|c.o[OBJ(w)]? C.cv=2 w=f(c.O,o,w,i)||w;;--OPERATOR (and or not)
+                --keywords leveling part
+                /|k>7&&k<12?c.L(ow);--end  level
+                /|k<10?c.L(ow,1);   --open level
+                --TODO add level restarter for 'in for while, then elseif else' to separate code blocks
+            :|c.o[ow]? C.cv=2 w=f(c.O,o,w,i)||w;;--OPERATOR (and or not)
         /|!C.cv?
-            /|!o?C.cv=w:find"^['\"%[]"&&5||3 w=f(c.W,o,w,i)||w --WORD(3)     STRING(5)
-            \|C.cv=o:find"^[%[%]%(%){}]"&&4||2 w=f(c.O,o,w,i)||w;;       --OPERATOR(2) BREAKET(4)
+            /|!o?C.cv=w:find"^['\"%[]"&&6||3 w=f(c.W,o,w,i)||w                       --KEYWORD(1)  WORD(3)         STRING(6)
+            \|C.cv=o:find"^[%[%({]"&&4||o:find"^[%]%)}]"&&5||2 
+              /|C.cv==4?c.L(o,1); --breaket+
+              /|C.cv==5?c.L(o);   --breaket-
+              w=f(c.O,o,w,i)||w;;                                                    --OPERATOR(2) BREAKET_OPEN(4) BREAKET_CLOSE(5)
         w=f(c.A,o,w,i)||w--ALL
         $w;})
     
     --START SEARCHER
     --@lb=->OBJ(r[#r]):find"^ ?[%]%)}\"']";
     l.o[#l.o+1]=o,t=>--on level open
-        @s=#r+(o&&0||1)--word or breaket if o exist -> it's a breaket
-        /|C.pv<3?l[#l].st=s;--previous level
+        @s=#r+1
+        /|C.pv&&C.pv<3?l[#l].st=s;--previous level
         t.st=s+1;--next level table
     c.W.st=o,w=>
         @p=OBJ(r[#r])
         /|p:find"[.:]"&&#p<2?$;--default start searcher allowed operators
-        /|C.cv==5&&C.pv>2?$;--current word is string and previous word was an operator or keyword
+        /|C.cv==6&&C.pv>2?$;--current word is string and previous word was an operator or keyword
         l[#l].st=#r+1;
     ;}
 -- nil forgiving function initialiser
@@ -290,7 +293,7 @@ F.N={C=>
 for v,k in('.:"({'):gfind"()(.)"do
     F.N['?'..k]=C,o,w=>
         @r=C.R
-        /|#r<2||C.pv<3?ATP(C,k,r[#r]);--previous value was a keyword or
+        /|#r<2||C.pv<3?ATP(C,k,r[#r]);--previous value was a keyword or operator
         /|o:sub(3):find"[^\0%s]"?ATP(C,OBJ(o:sub(3)),k);
         table.insert(C.R,C.L[#C.L].st," cssc.nilF(")--first part
         r[#r+1]=v==2&&",'"..w.."')"||')'
@@ -318,25 +321,41 @@ F.K[1]=C=>C.EQ={"&&","||",unpack(C.EQ||{})};
 --C SuS SuS: a*=4+5 --> a=a*4+5
 --C++      : a*=4+5 --> a=a*(4+5)
 --Current solution: for full priority mimicry -> place sequence into breakets like in examle.
+@qeq=b,a=> --b - base, a - adition
+/|a==nil?$b
+\|$a;;
 F.C={C=>
     F.c[1](C)--load start searcher
-    
     --EQ - table with operators that support *op*= behaviour
-    C.EQ={"+","-","*","%","/","..","^",unpack(C.EQ||{})}
+    C.EQ={"+","-","*","%","/","..","^","?",unpack(C.EQ||{})}
     @l=C.L
     @r=C.R
+    C.C.A.br=o,w=>
+        /|l[#l].br&&(C.pv==3||C.pv>4)&&(C.cv==1||C.cv==3||(o==','||o==';'))? --breaket request located and end of block located
+            l[#l].br=nil
+            r[#r+1]=")";;
+    l.c[#l.c+1]=o,t=>/|t.br?r[#r+1]=")";; -- on level end
+    C.F.c==>/|l[#l].br?r[#r+1]=")";;
     --operator main parce function
-    --TODO insert end searcher feature for ?= operator support in C SuS SuS future versions... (this feature will apear only after function leveling realisation)
     @op=C,o,w=>
-        o=o:sub(1,-2)--for this we need only the first part of operator
-        r[#r+1]="="--insert equality
+        @lt=l[#l].t
+        /|lt:find"[{(%[]"||lt=="if"||lt=="for"||lt=="while"?err(C,"Attempt to use X= operator in prohibited area! '"..lt.." *var* X= *val* "..C.C.l[lt].."'");
+        /|OBJ(r[l[#l].st-1]||"")==","?err(C,"Comma detected! X= operators has no multiple assignments support!");
+        /|#r<2||C.pv<3?ATP(C,k,r[#r]);
+        o=o:match"(.-)="--for this we need only the first part of operator
+        r[#r+1]="="..(o=="?"&&"cssc.q_eq("||"")--insert equality or ?=
         l[#l].m={bor=#r+1} --Lua5.3 feature support
         for i=l[#l].st,#r-1 do r[#r+1]=r[i]end --copy variable from the start of an object
         @t=#type(C.O[o])
-        /|t==6?r[#r+1]=C.O[o]--string
+        /|o=="?"?r[#r+1]=","
+        :|t==6?r[#r+1]=C.O[o]--string
         :|t==3?r[#r+1]=o--operator
         \|C.O[o](C,o,w);--function
-        l[#l].m={bor=#r+1};--Lua5.3 feature support
+        --print(C,o,w)
+        /|o~="?"?r[#r+1]="("; --add opening breaket
+        l[#l].br=1  --request closing breaet for this level
+        l[#l].m={bor=#r+1} --Lua5.3 feature support
+        ;
     -- main function initialiser        
     for i=1,#C.EQ do C.O[C.EQ[i].."=" ]=op end;--END OF F.C
 }
@@ -350,17 +369,19 @@ F.C={C=>
         {__concat=v,a=> --a args v value
         /|type(a[1])=="table"?a=a[1];
         for i=1,#a do
-            /|tof(v[1])==a[i]?$true;
-                  end $false;});})
+            /|tof(v)==a[i]?$true;
+                  end
+        $false;});})
 env.typeof=tof--include typeof into CSSC environment
 F.IS={C=>
-    F.c[1](C)
+    F.c[1](C) 
     C.C.o['is']=1
     @l=C.L
-    C.C.O[1]=C,w=>
+    C.C.O[1]=o,w=>
         w=OBJ(w)
         /|w=='is'?
-            $"..cssc.is..";;;}
+            /|#C.R<2||C.pv<3?ATP(C,'is',C.R[#C.R]);
+            $" ..cssc.is.. ";;;}
 
 --Lua5.3 operators feature! Bitwise and idiv operators support!
 --WARNING! This feature has no support of `function()end` constructors! (At last for now)
@@ -403,7 +424,7 @@ F.M={C=>
     @r=C.R
     l[#l].m={bor=1}
     --on level open
-    l.o[#l.o+1]=o,t=>t.m={bor=#r+1};
+    l.o[#l.o+1]=o,t=>t.m={bor=#r+2};
     --function to correct priority of sequence (set on O and on W)
     C.C.A.pc=o,w=>
         @i=#r+2
@@ -453,7 +474,7 @@ F.A={C=>
  end
  ;}
 
-_G.cssc={features=F,load=L,nilF=N,mt=M,version="3.4-beta",creator="M.A.G.Gen.",__CSSC=_ENV,is=is,env=env}
-]],"SuS",nil,_ENV)--]=]
+_G.cssc={features=F,load=L,nilF=N,mt=M,version="3.5-beta",creator="M.A.G.Gen.",__CSSC=_ENV,is=is,q_eq=qeq,env=env}
+]=],"SuS",nil,_ENV)--]=]
 b=b and error(b)
 a=a and a(...)

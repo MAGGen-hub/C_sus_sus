@@ -1,121 +1,4 @@
-
-K={}
-Ks="if elseif else function for while repeat do then end until local return in break "
-Kb={}
-Ks:gsub("(%S+)( )",function(x,s)K[#K+1]=s..x..s Kb[x]=#K end)
-local l=function(C,o)
-local i,a,e,p=#C.R,1
-e=C.R[i]
-p=e:find"^%)%s*"and""or"("
-while i>0 and(#p>0 and(a and(e:match"[%w_]+"or"..."==e)or","==e)or#p<1 and not e:find"^%(%s*")do
-i,a=i-1,not a
-e=C.R[i] end
-table.insert(C.R,#p<1 and i or i+1,K[4]..p)
-C.R[#C.R+1]=(#p>0 and")"or"")..(o:sub(1,1)=="-"and K[13]or"")
-if C.L then C.C.L("function",1)end
-end
-F={
-E={ ["/|"]=K[1],
-["?"]=K[9],
-[":|"]=K[2],
-["\\|"]=K[3]},
-K={ ["@"]=K[12],
-["$"]=K[13],
-["||"]=" or ",
-["&&"]=" and ",
-["!"]=" not ",
-[";"]=K[10]},
-F={ ["->"]=l,
-["=>"]=l}
-}
-NL,a,b=load
-L=function(x,name,mode,env)
-if type(x)=="string" then
-local c=x:match"^<.->"or x:match"^#!.-\n?<.->"
-if c then
-local po,R,O,C,s,t,a,b,l,e="",{""},{['"']="",["\0"]="\n",['..']='..',['...']='...'}
-x=x:sub(#c+1)
-C={O=O,C=function()end,R=R,F={},c={},l=1,pv=1}
-for K,V in ("D"..c):gmatch"([%w_]+)%(?([%w_. ]*)"do
-if F[K]then
-for k,v in pairs(F[K])do O[k]=v end
-l=F[K][1]and F[K][1](C,V,x,name,mode,env)
-if l then return l end
-end
-end
-O[1]=nil
-l=#x+1
-for o,w,i in x:gmatch"([%s!#-&(-/:-@\\-^{-~`]*%[?=*[%['\"]?%s*)([%w_]*[^%w%p%s]*[^\n%S]*)()"do
-o:gsub("\n",function()C.l=C.l+1 end)
-if s then
-a,b,e=o:find(#s<2 and"(\\*[\n"..s.."])%s*"or"(%]=*%])%s*")
-if a and(#s<2 and(s=="\n"or#e%2>0)or#s==#e)or i==l then
-b=b or i
-t=t..o:sub(0,b)
-if c then c=C.c
-else
-t=C.C(nil,t,i)or t
-c=R
-end
-c[#c+1]=t
-o=po..o:sub(b+1)
-s,t=nil
-else
-t=t..o..w
-end
-end
-if not s then
-o=o:gsub("-%-%s-\n","")
-c=o:match"-%-%[?=*%[?"
-s=o:match"%[=*%["or o:match"['\"]"
-if c or s then
-a=o:find(c or s,1,1)
-s=c and(c:sub(3)==s and s or"\n")or s
-t,w=o:sub(a)..w,""
-o=o:sub(0,a-1)..(c and"\0"or'"')
-po=c and (o or "") or""
-end
-if not c or i==l then
-while #o>0 do
-a=o:match"^%s*"
-R[#R]=R[#R]..a
-o=o:sub(#a+1)
-for i=3,1,-1 do
-a=o:sub(1,i)
-b=O[a] or i<2 and a
-if b and #o>0 then
-b=C.C(a,b,i)or b
-if 7>#type(b)then
-R[#R+1]=b
-o=o:sub(i+1)
-else
-b={b(C,o,w,i)}
-o,w=b[1]or o:sub(i+1),b[2]or w
-end
-break
-end
-end
-end
-if #w>0 then
-w=C.C(nil,w,i)or w
-R[#R+1]=w
-end
-end
-end
-end
-a,b=nil
-for k,v in pairs(C.F) do
-a,b,e=v(C,x,name,mode,env)
-if e then env=e end
-if a or b then return a,b end
-end
-x=table.concat(R)
-if mode=="c"then return R end
-end
-end
-return NL(x,name,mode,env)
-end
-a,b=L([=[<K,E,F>
+a,b=cssc.load([=[<K,E,F,dbg>
 F.K[';']=C,o,w=>
 @a,p=o:match"(;*) *([%S\n]?)%s*"
 /|#p>0&&p~="("||#a>1?
@@ -366,6 +249,8 @@ end
 end
 ;}
 _G.cssc={features=F,load=L,nilF=N,mt=M,version="3.5-beta",creator="M.A.G.Gen.",__CSSC=_ENV,is=is,q_eq=qeq,env=env}
-]=],"SuS",nil,_ENV)
-b=b and error(b)
-a=a and a(...)
+]=],"SuS","s",_ENV)
+print(a)
+file=fs.open("data/progs/a_new_cssc/after.lua","w")
+file.write(a)
+file.close()
