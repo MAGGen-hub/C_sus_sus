@@ -73,7 +73,7 @@ L=function(x,name,mode,env)
             
             --COMPILE -- o: operator, w: word
             l=#x+1
-            for o,w,i in x:gmatch"([%s!#-&(-/:-@\\-^{-~`]*%[?=*[%['\"]?%s*)([%w_]*[^%w%p%s]*[^\n%S]*)()"do
+            for o,w,i in x:gmatch"([%s!#-&(-/:-@\\-^{-~`]*%[?=*[%['\"]?%s*)([%w_]*[^%w%p%[-`{-~\\-_%s]*[^\n%S]*)()"do
                                         -- see that pattern? Now try to spell it in one breath! =P
                 --LINE COUNTER          -- in this pattern the word (w) will never be "^%s*$"!
                 o:gsub("\n",function()C.l=C.l+1 end)
@@ -474,7 +474,7 @@ F.A={C=>
  end
  ;}
 
-_G.cssc={features=F,load=L,nilF=N,mt=M,version="3.5-beta",creator="M.A.G.Gen.",__CSSC=_ENV,is=is,q_eq=qeq,env=env}
+_G.cssc={features=F,load=L,nilF=N,mt=M,version="3.5-alpha",creator="M.A.G.Gen.",__CSSC=_ENV,is=is,q_eq=qeq,env=env}
 ]=],"SuS",nil,_ENV)--]=]
 b=b and error(b)
 a=a and a(...)
