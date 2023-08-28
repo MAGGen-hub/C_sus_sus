@@ -51,15 +51,15 @@ F={ ["->"]=l,
     end}
 }
 NL,a,b=load --native CraftOS load function
-L=function(x,name,mode,env)
+L= function (x,name,mode,env)
     if type(x)=="string" then -- x might be a function or a string
-        local c=x:match"^<.->"or x:match"^#!.-\n?<.->" -- locate control string
+        local c=x:match"^<.->" or x:match"^#!.-\n?<.->" -- locate control string
         if c then --control string exists!
         
             --INITIALISE LOCALS
-            local po,R,O,C,s,t,a,b,l,e="",{""},{['"']="",["\0"]="\n",['..']='..',['...']='...'} -- " - for strings \0 - for comments
+            local po,R,O,C,s,t,a,b,l,e="",{""},{['"']= function () return end ,["\0"]= function (C) local r=C.R r[#r]=r[#r].." "..(table.remove(C.c,1) or "") end,['..']='..',['...']='...'} -- " - for strings \0 - for comments
             x=x:sub(#c+1) --remove control string to start parsing
-            C={O=O,C=function()end,R=R,F={},c={},l=1,pv=1} -- initialise control tablet for special functions call
+            C={O=O,C= function () end ,R=R,F={},c={},l=1,pv=1} -- initialise control tablet for special functions call
                  --S -> the core module (empty by default)
             --INITIALIZE COMPILLER
             for K,V in ("D"..c):gmatch"([%w_]+)%(?([%w_. ]*)"do--load flags that used in control string: K - feature name V - feature argument
@@ -173,8 +173,7 @@ OBJ=o=>$type(o)=='string'&&o:match"%S+"||"";
 env={}
 
 --Default features: comment parcing
-F.D={["\0"]=C=>@r=C.R r[#r]=r[#r].." "..(table.remove(C.c,1)||"");,
-     ['"']=C=>$nil;}
+--F.D={["\0"]=C=>@r=C.R r[#r]=r[#r].." "..(table.remove(C.c,1)||"");,['"']=C=>$nil;}
 
 --Error detector
 err=C,s=>C.err=C.err||"SuS["..C.l.."]:"..s;
@@ -237,9 +236,11 @@ F.c={C=>
                \|@e=C.C.l[l[#l].t]
                  /|e&&e~=o?err(C,"Expected '"..e.."' after '"..l[#l].t.."' but got '"..o.."'!");--level error detection
                  /|#l<2?err(C,"Unexpected '"..o.."'!");
-                 f(l.c,o,l[#l])l[#l]=#l<2&&l[#l]||nil;;}-- level-
+                 @cl=l[#l]
+                 l[#l]=#l<2&&l[#l]||nil
+                 f(l.c,o,cl);;}-- level-
     @c=C.C
-    C.F[1]==>/|#l>1?err(C,"Uncolsed construction! Missing '"..(c.l[l[#l].t]||"end").."'!");;
+    C.F[1]==>/|#l>1?err(C,"Unclosed construction! Missing '"..(c.l[l[#l].t]||"end").."'!");;
     
     --CORE function
     setmetatable(C.C,{__call=S,o,w,i=>
@@ -249,11 +250,11 @@ F.c={C=>
         /|#type(w)==6?
             @ow=OBJ(w)
             @k=Kb[ow]--get keyword id if keyword
-            /|k?C.cv=1 w=f(c.K,o,w,i)||w--KEYWORD
+            /|k?C.cv=1--KEYWORD
                 --keywords leveling part
                 /|k>7&&k<12?c.L(ow);--end  level
                 /|k<10?c.L(ow,1);   --open level
-                --TODO add level restarter for 'in for while, then elseif else' to separate code blocks
+                w=f(c.K,o,w,i)||w
             :|c.o[ow]? C.cv=2 w=f(c.O,o,w,i)||w;;--OPERATOR (and or not)
         /|!C.cv?
             /|!o?C.cv=w:find"^['\"%[]"&&6||3 w=f(c.W,o,w,i)||w                       --KEYWORD(1)  WORD(3)         STRING(6)
@@ -275,6 +276,47 @@ F.c={C=>
         /|p:find"[.:]"&&#p<2?$;--default start searcher allowed operators
         /|C.cv==6&&C.pv>2?$;--current word is string and previous word was an operator or keyword
         l[#l].st=#r+1;
+    ;}
+
+UE=C,o=>err(C,"Unexpected '"..o.."'!");
+F.D={C=>
+    F.c[1](C)
+    @l=C.L
+    @r=C.R
+    l.o[#l.o+1]=o,t=>
+        /|t.t=="function"?t.ada=1;-- allow_default_args for nex level
+        /|l[#l].ada?
+            l[#l].ada=nil
+            /|t.t=="("?t.da={};;;
+    l.c[#l.c+1]=o,t=>--on level close
+        l[#l].ada=nil
+        /|t.da&&#t.da>0&&t.t=="("? -- da - default_args
+            r[#r+1]=")"
+            t.da[#t.da].nd=t.da[#t.da].nd||#r-1 --set last index if not exist
+            --remove default statements and finalise default args
+            for i=#t.da,1,-1 do
+            --print(r[t.da[i].st],t.da[i].nd,#r,t.t)
+                @ob=r[t.da[i].st-1]
+                r[#r+1]="if "..ob.."==nil then "..ob.."="--insert start
+                for j=t.da[i].st,t.da[i].nd do r[#r+1]=r[j]end--insert obj
+                r[#r+1]=" end "--insert end
+                for j=t.da[i].nd,t.da[i].st,-1 do table.remove(r,j)end--remove default arg
+                            end
+            t.da=nil
+            C.C.A.da=o,w=>C.C.A.da=nil$()->;;
+            ;;
+    C.C.O.da=o,w=> --catch coma and ';'
+        @d=l[#l].da
+        /|d&&o==';'?UE(C,';');
+        /|d&&#d>0&&o==','?
+            d[#d].nd=d[#d].nd||#r
+            ;
+        ;
+    C.O[":="]=C,o,w=>
+        /|!l[#l].da?UE(C,':=')--emit an error
+        \|@d=l[#l].da
+          d[#d+1]={st=#r+1};
+        ;
     ;}
 -- nil forgiving function initialiser
 do
