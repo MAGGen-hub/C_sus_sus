@@ -16,7 +16,10 @@ local l=function(C,o) --DO NOT PLACE LAMBDA AT THE START OF FILE!!! You will got
         e=C.R[i] end
     table.insert(C.R,#p<1 and i or i+1,K[4]..p)-- K[4] - function keyword K[13] - return
     C.R[#C.R+1]=(#p>0 and")"or"")..(o:sub(1,1)=="-"and K[13]or"") --WARNING!!! Thanks for your attention! =)
-    if C.L then C.C.L("function",1)end
+    if C.L then --core exist
+        C.pv=2 -- Lua5.3 operators compatability patch (and for some future things)
+        C.C.L("function",1)
+    end
 end
 
 --FEATURES TABLE
@@ -50,6 +53,9 @@ F={ ["->"]=l,
         --C.S.dbg=nil
     end}
 }
+
+-- C SuS SuS Compiller (CSSC)
+-- Base function for all cores and modules
 NL,a,b=load --native CraftOS load function
 L= function (x,name,mode,env)
     if type(x)=="string" then -- x might be a function or a string
@@ -155,8 +161,9 @@ L= function (x,name,mode,env)
     return NL(x,name,mode,env)
 end
 
---COMPILLER EXTENSIONS:load other features of compiler using compiler ITSELF (can be used as example of C SuS SuS programming)
+--COMPILLER CORES AND MODULES:load other features of compiler using compiler ITSELF
 a,b=L([=[<K,E,F,dbg>
+
 F.K[';']=C,o,w=> -- any ";" that stand near ";,)]" or "\n" will be replaced by " end " for ex ";;" equal to " end  end "
     @a,p=o:match"(;*) *([%S\n]?)%s*"
     /|#p>0&&p~="("||#a>1?
@@ -166,18 +173,15 @@ F.K[';']=C,o,w=> -- any ";" that stand near ";,)]" or "\n" will be replaced by "
                   end
     \|C.R[#C.R+1]=";";
     $o:sub(#a+1);
---OBJ function
+    
+--OBJ: object separator function
 OBJ=o=>$type(o)=='string'&&o:match"%S+"||"";
 
 --Environmet table
 env={}
 
---Default features: comment parcing
---F.D={["\0"]=C=>@r=C.R r[#r]=r[#r].." "..(table.remove(C.c,1)||"");,['"']=C=>$nil;}
-
 --Error detector
 err=C,s=>C.err=C.err||"SuS["..C.l.."]:"..s;
-
 F.err={C=>
     C.F.err=C=>
         /|C.err?$ nil,C.err;;;}
@@ -189,7 +193,7 @@ F.pre={C,V,x,n,m,e=>
     /|P[V]?$NL(P[V],n,m,e);
     C.F.pre=C=>P[V]=table.concat(C.R);;}
 
---Debug feature
+--Debug feature (old debug will be removed in final version)
 F.dbg={C,V=>-- V - argument
     @v=V
     C.F.dbg=C,x,n,m=>
@@ -217,7 +221,7 @@ F.b={C=>--return function that will be inserted in special extensions table
 
 --ATP: Attempt to perform
 ATP=C,wt,on=>err(C,"Attempt to perform '"..wt.."' on '"..on.."'!");
---New parcer core for C SuS SuS 3.5
+--C SuS SuS Language Core
 F.c={C=>
     /|C.CR?$;
     C.CR=1--mark & skip
@@ -278,7 +282,9 @@ F.c={C=>
         l[#l].st=#r+1;
     ;}
 
+--UE:Unexpected value
 UE=C,o=>err(C,"Unexpected '"..o.."'!");
+-- Default function arguments feature
 F.D={C=>
     F.c[1](C)
     @l=C.L
@@ -303,8 +309,7 @@ F.D={C=>
                 for j=t.da[i].nd,t.da[i].st,-1 do table.remove(r,j)end--remove default arg
                             end
             t.da=nil
-            C.C.A.da=o,w=>C.C.A.da=nil$()->;;
-            ;;
+            C.C.A.da=o,w=>C.C.A.da=nil$()->;;;;--this part is required to switch of the ')' insertion (because we already inserted one)
     C.C.O.da=o,w=> --catch coma and ';'
         @d=l[#l].da
         /|d&&o==';'?UE(C,';');
@@ -318,7 +323,8 @@ F.D={C=>
           d[#d+1]={st=#r+1};
         ;
     ;}
--- nil forgiving function initialiser
+
+-- Nil forgiving operators feature
 do
 @c,d=setmetatable--nil returning object | nilF feature: nil forgiving operators | d -> default c-> colon
 d=c({},{__call=->nil;,__index=->nil;})
@@ -351,18 +357,12 @@ for v,k in('.:"({'):gfind"()(.)"do
                                end
 end
 
+-- X= operators feature.
+--WARNING! They don't support multiple asignemnt (a,b X= *code*) - is prohibited!
+
 --Add initialiser function to F.K feature to enable support of &&= and ||= 
 F.K[1]=C=>C.EQ={"&&","||",unpack(C.EQ||{})};
-
-
---REWORK IN PROGRESS
--- X= operators feature
---WARNING! This feature has only partual support of C++ X= operator
---It has default lua priority, not C++:
---Example: 
---C SuS SuS: a*=4+5 --> a=a*4+5
---C++      : a*=4+5 --> a=a*(4+5)
---Current solution: for full priority mimicry -> place sequence into breakets like in examle.
+-- ?= function
 @qeq=b,a=> --b - base, a - adition
 /|a==nil?$b
 \|$a;;
@@ -402,10 +402,7 @@ F.C={C=>
     for i=1,#C.EQ do C.O[C.EQ[i].."=" ]=op end;--END OF F.C
 }
 
---IS keyword simular to type of
---WARNING! "is" keyword accepts as second argument only strings or variables in breakets
---EXAMPLE: first_arg is "second_arg", first_arg is {"second_arg","third_arg"}, first_arg is (second_arg)
---This: (first_arg is second_arg) will emit an error!
+--IS keyword simular to typeof()
 @tof=o->(getmetatable(o)||{}).__type||type(o);
 @is=setmetatable({},{__concat=v,a=>$setmetatable({a},--is inited
         {__concat=v,a=> --a args v value
@@ -426,9 +423,6 @@ F.IS={C=>
             $" ..cssc.is.. ";;;}
 
 --Lua5.3 operators feature! Bitwise and idiv operators support!
---WARNING! This feature has no support of `function()end` constructors! (At last for now)
---If you want to a = function()end>>5 then use breakets: like this: a = (function()end)>>5
---Same rule works for lambdas => ->, so BE CAREFULL and DO NOT mix functions and numbers!
 do
 @B={}
 for k,v in pairs(bit32)do B[k]=v end
@@ -436,7 +430,7 @@ B.idiv=a,b->math.floor(a/b);
 B.shl=B.lshift
 B.shr=B.rshift
 @bt={shl='<<',shr='>>',bxor='~',bor='|',band='&',idiv='//'}
-@kp={}('and or , = ; > < >= <= ~= == => -> '):gsub("%S+",(x)=>kp[x]=1;) -- all operators that has lower priority than bitise operators
+@kp={}('and or , = ; > < >= <= ~= == '):gsub("%S+",(x)=>kp[x]=1;) -- all operators that has lower priority than bitise operators
 @f=t,m->"Attempt to perform "..t.." bitwise operation on a "..m.." value";
 M={bnot=setmetatable({},{
     __pow=a,b=>
@@ -466,11 +460,14 @@ F.M={C=>
     @r=C.R
     l[#l].m={bor=1}
     --on level open
-    l.o[#l.o+1]=o,t=>t.m={bor=#r+2};
+    l.o[#l.o+1]=o,t=>
+        /|o=="function"&&C.pv==2?l[#l].m.sk=1; -- curent value is function keyword and previous value was an operator -> mark function end on skip
+        t.m={bor=#r+2};
     --function to correct priority of sequence (set on O and on W)
     C.C.A.pc=o,w=>
         @i=#r+2
-        @b=C.cv<2||o&&kp[o]--current value is equal to keyword or operator and has lower priority than bitwises
+        @b=C.cv<2&&!l[#l].m.sk||o&&kp[o]--current value is equal to keyword or operator and has lower priority than bitwises
+        l[#l].m.sk=nil--reset end skip
         /|b?l[#l].m={bor=i};--reset the starter table
         /|b||o&&(" .. + -"):find(' '..o..' ',1,1)?l[#l].m.idiv=i;;--start of sequence and reset!
     for k,v in pairs(bt)do
