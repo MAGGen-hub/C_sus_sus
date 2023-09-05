@@ -4,6 +4,8 @@ Lua5.2 based pseudo coding language
 
 Language created for memory saving in Craft-OS and CC:Tweaked projects.
 
+Legacy version! Not supported any more.
+
 Can be used in other lua scripts with a few changes.
 
 Code: cssc.lua
