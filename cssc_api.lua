@@ -3,7 +3,7 @@
 --CODE START
 --this section contain all lua keywords for specific features
 K={}
-Ks="if elseif else function for while repeat do then end until local return in break "
+Ks="if function for while repeat elseif else do then end until local return in break "
 Kb={}
 Ks:gsub("(%S+)( )", function (x,s)K[#K+1]=s..x..s Kb[x]=#K end )
 --initialize lambda function feature
@@ -14,7 +14,7 @@ local l= function (C,o) --DO NOT PLACE LAMBDA AT THE START OF FILE!!! You will g
     while i>0 and (#p>0 and (a and (e:match"[%w_]+" or "..."==e) or ","==e) or #p<1 and  not e:find"^%(%s*")do --comma or word or ( if ) located
         i,a=i-1,not a
         e=C.R[i] end
-    table.insert(C.R,#p<1 and i or i+1,K[4]..p)-- K[4] - function keyword K[13] - return
+    table.insert(C.R,#p<1 and i or i+1,K[2]..p)-- K[2] - function keyword K[13] - return
     C.R[#C.R+1]=(#p>0 and ")" or "")..(o:sub(1,1)=="-" and K[13] or "") --WARNING!!! Thanks for your attention! =)
     if C.L then --core exist
         C.pv=2 -- Lua5.3 operators compatability patch (and for some future things)
@@ -29,8 +29,8 @@ F={
 -- keywords and "if else then" shortcut section
 E={ ["/|"]=K[1],--if
     ["?"]=K[9],--then
-    [":|"]=K[2],--elseif
-    ["\\|"]=K[3]},--else
+    [":|"]=K[6],--elseif
+    ["\\|"]=K[7]},--else
 K={ ["@"]=K[12],--local
     ["$"]=K[13],--return
     ["||"]=" or ",--or
@@ -164,7 +164,7 @@ L= function (x,name,mode,env)
 end
 
 --COMPILLER CORES AND MODULES:load other features of compiler using compiler ITSELF
-a,b=L([=[<K,E,F,dbg>
+a,b=L([=[<K,E,F>
 
 F.K[';']=C,o,w=> -- any ";" that stand near ";,)]" or "\n" will be replaced by " end " for ex ";;" equal to " end  end "
     @a,p=o:match"(;*) *([%S\n]?)%s*"
@@ -286,7 +286,7 @@ F.c={C=>
                  f(l.c,o,cl);;}-- level-
     @c=C.C
     C.F[1]=x,n,m,e=>
-        /|#l>1?err(C,"Unclosed construction! Missing '"..(c.l[l[#l].t]||"end").."'!");
+        /|#l>1?err(C,"Unclosed construction! Missing '"..(c.l[l[#l].t]||"end").."'!"..#l);
         @p=e&&e.package --CC:T require 
         /|p?p.path=p.path..cssc.path--if package.path exist then add additional path
             setfenv(p.loaders[2],setmetatable({loadfile=env.loadfile},{_index=_G}))
@@ -302,7 +302,7 @@ F.c={C=>
             @k=Kb[ow]--get keyword id if keyword
             /|k?C.cv=1--KEYWORD
                 --keywords leveling part
-                /|k>7&&k<12?c.L(ow);--end  level
+                /|k>5&&k<12?c.L(ow);--end  level
                 /|k<10?c.L(ow,1);   --open level
                 w=f(c.K,o,w,i)||w
             :|c.o[ow]? C.cv=2 w=f(c.O,o,w,i)||w;;--OPERATOR (and or not)
