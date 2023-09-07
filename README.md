@@ -9,7 +9,7 @@ Code: cssc_api.lua
 
 Launcher: cssc.lua
 
-Startup: startup.lua
+Startup: 00_cssc.lua
 
 Current API and Language version: 3.5-beta
 
